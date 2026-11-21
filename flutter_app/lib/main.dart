@@ -268,6 +268,10 @@ class _GameShellState extends State<GameShell> {
   }
 
   void _trainPlayer() {
+    if (lineup[selectedPlayer].rating >= 99) {
+      message('${lineup[selectedPlayer].name} has reached the training limit');
+      return;
+    }
     if (coins < 10000) {
       message('Training costs 10,000 coins');
       return;
@@ -633,7 +637,7 @@ class _GameShellState extends State<GameShell> {
           Row(children: [
             Expanded(child: _quickMode(Icons.emoji_events_outlined, 'TOURNAMENTS', '5 competitions', 'tournaments')),
             const SizedBox(width: 9),
-            Expanded(child: _quickMode(Icons.groups_rounded, 'MY SQUAD', 'OVR 88  •  4-3-3', 'squad')),
+            Expanded(child: _quickMode(Icons.groups_rounded, 'MY SQUAD', 'OVR ${_teamRating()}  •  $formation', 'squad')),
           ]),
           const SizedBox(height: 12),
           _sectionTitle('NEXT MATCH', 'VIEW FIXTURE', () => go('prematch')),
@@ -1157,7 +1161,7 @@ class _GameShellState extends State<GameShell> {
   );
 
   Widget _store() => _page(
-    eyebrow: 'BUILD YOUR ULTIMATE TEAM',
+    eyebrow: 'BUILD YOUR ULTIMATE TEAM  •  ${collection.length} NEW CARDS',
     title: 'Store',
     children: [
       _segmented(['PLAYERS', 'PACKS', 'COINS', 'SPECIAL'], storeTab, (i) => setState(() => storeTab = i)),
