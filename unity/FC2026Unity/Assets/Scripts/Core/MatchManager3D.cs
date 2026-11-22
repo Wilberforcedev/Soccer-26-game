@@ -53,6 +53,14 @@ namespace FC2026.Core
         private bool resultSaved;
         private GUIStyle commentaryStyle;
         private GUIStyle fullTimeStyle;
+        private GUIStyle teamNameStyle;
+        private GUIStyle clockStyle;
+        private GUIStyle brandStyle;
+        private GUIStyle scoreboardStyle;
+        private GUIStyle pauseIconStyle;
+        private GUIStyle pauseCloseStyle;
+        private GUIStyle actionPrimaryStyle;
+        private GUIStyle actionSecondaryStyle;
         private int styleScreenWidth = -1;
         private int styleScreenHeight = -1;
 
@@ -1281,6 +1289,8 @@ namespace FC2026.Core
                 scoreStyle = helpStyle = goalStyle = null;
                 buttonStyle = primaryButtonStyle = flowButtonStyle = panelStyle = null;
                 labelSmallStyle = commentaryStyle = fullTimeStyle = null;
+                teamNameStyle = clockStyle = brandStyle = scoreboardStyle = null;
+                pauseIconStyle = pauseCloseStyle = actionPrimaryStyle = actionSecondaryStyle = null;
             }
 
             scoreStyle ??= HubTheme.Label(
@@ -1299,39 +1309,72 @@ namespace FC2026.Core
             labelSmallStyle ??= HubTheme.Label(
                 HubTheme.ResponsiveFontSize(65f, 11, 18), HubTheme.SecondaryTextColor, TextAnchor.MiddleCenter, true);
             labelSmallStyle.clipping = TextClipping.Ellipsis;
+            teamNameStyle ??= HubTheme.Label(
+                HubTheme.ResponsiveFontSize(56f, 11, 17), HubTheme.TextColor, TextAnchor.MiddleCenter, true);
+            teamNameStyle.clipping = TextClipping.Clip;
+            clockStyle ??= HubTheme.Label(
+                HubTheme.ResponsiveFontSize(62f, 10, 16), HubTheme.SecondaryTextColor, TextAnchor.MiddleCenter, true);
+            clockStyle.clipping = TextClipping.Ellipsis;
+            brandStyle ??= HubTheme.Label(
+                HubTheme.ResponsiveFontSize(64f, 10, 16), HubTheme.AccentTextColor, TextAnchor.MiddleCenter, true);
+            scoreboardStyle ??= HubTheme.Card();
+            pauseIconStyle ??= HubTheme.CircleButton(HubTheme.ResponsiveFontSize(46f, 13, 20));
+            pauseCloseStyle ??= HubTheme.CircleButton(HubTheme.ResponsiveFontSize(52f, 12, 18));
 
             var safeArea = Screen.safeArea;
             var safeTop = Screen.height - safeArea.yMax;
-            var availableBoardWidth = Mathf.Max(0f, safeArea.width - 24f);
-            var boardWidth = Mathf.Min(Mathf.Max(safeArea.width * 0.46f, 280f), availableBoardWidth);
+            var boardWidth = Mathf.Min(Mathf.Clamp(safeArea.width * 0.62f, 320f, 720f),
+                Mathf.Max(0f, safeArea.width - 24f));
+            var boardHeight = Mathf.Clamp(safeArea.height * 0.115f, 78f, 102f);
             var boardRect = new Rect(
-                safeArea.xMin + (safeArea.width - boardWidth) * 0.5f, safeTop + 8f, boardWidth, 108f);
-            GUI.Box(boardRect, string.Empty, panelStyle);
-            GUI.Label(new Rect(boardRect.x, boardRect.y + 2f, boardRect.width, 20f),
-                $"{matchLabel}   •   {homeTeamName.ToUpperInvariant()}   •   {awayTeamName.ToUpperInvariant()}", labelSmallStyle);
-            GUI.Label(new Rect(boardRect.x, boardRect.y + 19f, boardRect.width, 38f), $"{homeScore}  —  {awayScore}", scoreStyle);
+                safeArea.xMin + (safeArea.width - boardWidth) * 0.5f, safeTop + 8f, boardWidth, boardHeight);
+            GUI.Box(boardRect, GUIContent.none, scoreboardStyle);
+
+            var boardPad = Mathf.Clamp(boardWidth * 0.02f, 8f, 14f);
+            var crestSize = Mathf.Clamp(boardHeight * 0.34f, 22f, 34f);
+            var crestY = boardRect.y + boardPad;
+            var crestFont = HubTheme.ResponsiveFontSize(78f, 7, 12);
+            HubTheme.Crest(new Rect(boardRect.x + boardPad, crestY, crestSize, crestSize),
+                ClubPrimary32(homeClub), ClubSecondary32(homeClub),
+                CrestInitials(homeClub, homeTeamName), crestFont);
+            var awayCrestX = boardRect.xMax - boardPad - crestSize;
+            HubTheme.Crest(new Rect(awayCrestX, crestY, crestSize, crestSize),
+                ClubPrimary32(awayClub), ClubSecondary32(awayClub),
+                CrestInitials(awayClub, awayTeamName), crestFont);
+
+            var nameWidth = Mathf.Clamp(boardWidth * 0.27f, 60f, 168f);
+            GUI.Label(new Rect(boardRect.x + boardPad + crestSize + 6f, crestY, nameWidth, crestSize),
+                homeTeamName.ToUpperInvariant(), teamNameStyle);
+            GUI.Label(new Rect(awayCrestX - 6f - nameWidth, crestY, nameWidth, crestSize),
+                awayTeamName.ToUpperInvariant(), teamNameStyle);
+            GUI.Label(new Rect(boardRect.x + boardWidth * 0.3f, crestY - 3f, boardWidth * 0.4f, crestSize + 6f),
+                $"{homeScore}  —  {awayScore}", scoreStyle);
 
             var totalPossession = homePossession + awayPossession;
             var homePossessionPercent = totalPossession > 0.5f ? Mathf.RoundToInt(homePossession / totalPossession * 100f) : 50;
-            var minute = Mathf.Clamp(half * 45 + Mathf.FloorToInt(halfElapsed / HalfDurationSeconds * 45f), 0, 90);
-            GUI.Label(new Rect(boardRect.x, boardRect.y + 60f, boardRect.width, 20f),
-                $"{(half == 0 ? "1ST HALF" : "2ND HALF")}  {minute:00}'   •   POSSESSION {homePossessionPercent}% - {100 - homePossessionPercent}%",
-                labelSmallStyle);
+            var minute = CurrentMinute();
+            GUI.Label(new Rect(boardRect.x + boardPad, boardRect.yMax - boardPad - 18f,
+                    boardRect.width - boardPad * 2f, 18f),
+                $"{matchLabel}   •   {(half == 0 ? "1ST HALF" : "2ND HALF")}  {minute:00}'   •   POSSESSION {homePossessionPercent}% - {100 - homePossessionPercent}%",
+                clockStyle);
 
             DrawStaminaMeter(boardRect);
 
-            if (Application.isMobilePlatform)
+            if (live && !halfTimePending && !matchFinished)
             {
-                if (live && !halfTimePending && !matchFinished)
-                {
-                    var safeRight = safeArea.xMax;
-                    var pauseRect = new Rect(safeRight - 118f, safeTop + 18f, 102f, 44f);
-                    if (GUI.Button(pauseRect, "PAUSE", buttonStyle))
-                        PauseMatch();
+                var pauseSize = Mathf.Clamp(safeArea.height * 0.08f, 42f, 56f);
+                var pauseRect = new Rect(safeArea.xMax - pauseSize - 12f, safeTop + 12f, pauseSize, pauseSize);
+                if (GUI.Button(pauseRect, "II", pauseIconStyle))
+                    PauseMatch();
+                if (Application.isMobilePlatform)
                     DrawMobileControls();
-                }
             }
-            else
+            else if (Application.isMobilePlatform)
+            {
+                userPlayer?.SetMobileMove(Vector2.zero, false);
+            }
+
+            if (!Application.isMobilePlatform)
             {
                 var desktopSafeArea = Screen.safeArea;
                 var safeBottom = Screen.height - desktopSafeArea.yMin;
@@ -1350,7 +1393,7 @@ namespace FC2026.Core
             {
                 commentaryStyle ??= HubTheme.Label(
                     HubTheme.ResponsiveFontSize(48f, 14, 24), HubTheme.TextColor, TextAnchor.MiddleCenter, true, true);
-                var commentaryY = Mathf.Max(boardRect.yMax + 6f, safeTop + 98f);
+                var commentaryY = Mathf.Max(boardRect.yMax + 32f, safeTop + 120f);
                 var commentaryRect = new Rect(safeArea.xMin + safeArea.width * 0.12f, commentaryY,
                     safeArea.width * 0.76f, 42f);
                 GUI.Box(commentaryRect, string.Empty, panelStyle);
@@ -1366,28 +1409,45 @@ namespace FC2026.Core
             if (paused)
             {
                 fullTimeStyle ??= CreatePanelStyle();
+                var confirm = confirmRestart || confirmAbandon;
                 var panel = HubTheme.CenteredPanel(
-                    Mathf.Min(Screen.width * 0.84f, 540f),
-                    Mathf.Min(Mathf.Max(Screen.height * 0.82f, 270f), 360f),
+                    Mathf.Min(Screen.width * 0.86f, 520f),
+                    Mathf.Min(Mathf.Max(Screen.height * 0.86f, 340f), 460f),
                     12f);
                 GUI.Box(panel, string.Empty, panelStyle);
+                GUI.Label(new Rect(panel.x + 56f, panel.y + 12f, panel.width - 112f, 20f), "SOCCER 27",
+                    brandStyle);
+
                 var title = confirmRestart ? "RESTART MATCH?" : confirmAbandon ? "LEAVE MATCH?" : "MATCH PAUSED";
-                GUI.Label(new Rect(panel.x + 12f, panel.y + 10f, panel.width - 24f, 48f), title, fullTimeStyle);
-                GUI.Label(new Rect(panel.x + 12f, panel.y + 58f, panel.width - 24f, 36f),
-                    $"{homeTeamName}  {homeScore}  —  {awayScore}  {awayTeamName}", scoreStyle);
+                GUI.Label(new Rect(panel.x + 12f, panel.y + 32f, panel.width - 24f, 40f), title, fullTimeStyle);
+
+                DrawModalScore(new Rect(panel.x + 16f, panel.y + 74f, panel.width - 32f, 70f), 44f);
+                GUI.Label(new Rect(panel.x + 12f, panel.y + 146f, panel.width - 24f, 20f),
+                    $"{homeTeamName}  {homeScore}  —  {awayScore}  {awayTeamName}", labelSmallStyle);
+                GUI.Label(new Rect(panel.x + 12f, panel.y + 166f, panel.width - 24f, 18f),
+                    $"{CurrentMinute():00}'  •  {(half == 0 ? "1ST HALF" : "2ND HALF")}", clockStyle);
+
+                if (!confirm)
+                {
+                    var closeSize = Mathf.Clamp(panel.width * 0.1f, 32f, 42f);
+                    if (GUI.Button(new Rect(panel.xMax - closeSize - 12f, panel.y + 12f, closeSize, closeSize),
+                        "X", pauseCloseStyle))
+                        ResumeMatch();
+                }
+
                 var buttonX = panel.x + panel.width * 0.14f;
                 var buttonWidth = panel.width * 0.72f;
                 const float buttonHeight = 42f;
                 const float buttonGap = 7f;
-                var buttonY = panel.y + 103f;
+                var buttonY = panel.y + 198f;
 
-                if (confirmRestart || confirmAbandon)
+                if (confirm)
                 {
                     var prompt = confirmRestart
                         ? "The score and match clock will reset."
                         : "Leave without recording this match in your career?";
-                    GUI.Label(new Rect(panel.x + 18f, buttonY, panel.width - 36f, 32f), prompt, labelSmallStyle);
-                    buttonY += 36f;
+                    GUI.Label(new Rect(panel.x + 18f, buttonY, panel.width - 36f, 30f), prompt, labelSmallStyle);
+                    buttonY += 34f;
                     if (GUI.Button(new Rect(buttonX, buttonY, buttonWidth, buttonHeight),
                         confirmRestart ? "RESTART MATCH" : "LEAVE MATCH", flowButtonStyle))
                     {
@@ -1422,15 +1482,21 @@ namespace FC2026.Core
             {
                 fullTimeStyle ??= CreatePanelStyle();
                 var panel = HubTheme.CenteredPanel(
-                    Mathf.Min(Screen.width * 0.6f, 640f),
-                    Mathf.Min(Screen.height * 0.36f, 300f),
+                    Mathf.Min(Screen.width * 0.68f, 620f),
+                    Mathf.Min(Mathf.Max(Screen.height * 0.46f, 320f), 380f),
                     12f);
                 GUI.Box(panel, string.Empty, panelStyle);
-                GUI.Label(new Rect(panel.x + 12f, panel.y + 20f, panel.width - 24f, 56f), "HALF TIME", fullTimeStyle);
-                GUI.Label(new Rect(panel.x + 12f, panel.y + 84f, panel.width - 24f, 52f),
-                    $"{homeTeamName}  {homeScore}  —  {awayScore}  {awayTeamName}", scoreStyle);
-                if (GUI.Button(new Rect(panel.x + panel.width * 0.16f, panel.y + panel.height - 76f,
-                    panel.width * 0.68f, 54f), "START SECOND HALF", flowButtonStyle))
+                GUI.Label(new Rect(panel.x + 12f, panel.y + 10f, panel.width - 24f, 20f), "SOCCER 27",
+                    brandStyle);
+                GUI.Label(new Rect(panel.x + 12f, panel.y + 30f, panel.width - 24f, 42f), "HALF TIME",
+                    fullTimeStyle);
+                DrawModalScore(new Rect(panel.x + 16f, panel.y + 76f, panel.width - 32f, 64f), 40f);
+                GUI.Label(new Rect(panel.x + 12f, panel.y + 144f, panel.width - 24f, 20f),
+                    $"{homeTeamName}  {homeScore}  —  {awayScore}  {awayTeamName}", labelSmallStyle);
+                GUI.Label(new Rect(panel.x + 12f, panel.y + 164f, panel.width - 24f, 18f),
+                    $"{CurrentMinute():00}'", clockStyle);
+                if (GUI.Button(new Rect(panel.x + panel.width * 0.16f, panel.yMax - 72f,
+                    panel.width * 0.68f, 52f), "START SECOND HALF", flowButtonStyle))
                     BeginSecondHalf();
             }
 
@@ -1438,22 +1504,75 @@ namespace FC2026.Core
             {
                 fullTimeStyle ??= CreatePanelStyle();
                 var panel = HubTheme.CenteredPanel(
-                    Mathf.Min(Screen.width * 0.64f, 680f),
-                    Mathf.Min(Screen.height * 0.42f, 360f),
+                    Mathf.Min(Screen.width * 0.7f, 680f),
+                    Mathf.Min(Mathf.Max(Screen.height * 0.52f, 360f), 440f),
                     12f);
                 GUI.Box(panel, string.Empty, panelStyle);
-                GUI.Label(new Rect(panel.x + 12f, panel.y + 22f, panel.width - 24f, 62f),
+                GUI.Label(new Rect(panel.x + 12f, panel.y + 12f, panel.width - 24f, 20f), "SOCCER 27",
+                    brandStyle);
+                GUI.Label(new Rect(panel.x + 12f, panel.y + 32f, panel.width - 24f, 42f),
                     cupShootoutPending ? "PENALTIES" : "FULL TIME", fullTimeStyle);
-                GUI.Label(new Rect(panel.x + 12f, panel.y + 92f, panel.width - 24f, 58f),
-                    $"{homeTeamName}  {homeScore}  —  {awayScore}  {awayTeamName}", scoreStyle);
+                DrawModalScore(new Rect(panel.x + 16f, panel.y + 78f, panel.width - 32f, 64f), 40f);
+                GUI.Label(new Rect(panel.x + 12f, panel.y + 146f, panel.width - 24f, 20f),
+                    $"{homeTeamName}  {homeScore}  —  {awayScore}  {awayTeamName}", labelSmallStyle);
+                GUI.Label(new Rect(panel.x + 12f, panel.y + 166f, panel.width - 24f, 18f),
+                    $"{CurrentMinute():00}'", clockStyle);
                 if (cupShootoutPending)
-                    GUI.Label(new Rect(panel.x + 12f, panel.y + 146f, panel.width - 24f, 32f),
+                    GUI.Label(new Rect(panel.x + 12f, panel.y + 186f, panel.width - 24f, 30f),
                         $"SHOOTOUT  {cupShootout.UserScore} — {cupShootout.OpponentScore}  •  {(cupShootout.UserWon ? homeTeamName + " ADVANCE" : awayTeamName + " ADVANCE")}",
                         labelSmallStyle);
-                if (GUI.Button(new Rect(panel.x + panel.width * 0.15f, panel.y + panel.height - 82f,
-                    panel.width * 0.7f, 56f), "SAVE RESULT & RETURN TO CAREER", flowButtonStyle))
+                if (GUI.Button(new Rect(panel.x + panel.width * 0.15f, panel.yMax - 72f,
+                    panel.width * 0.7f, 52f), "SAVE RESULT & RETURN TO CAREER", flowButtonStyle))
                     CompleteCareerMatch();
             }
+        }
+
+        private int CurrentMinute()
+        {
+            return Mathf.Clamp(half * 45 + Mathf.FloorToInt(halfElapsed / HalfDurationSeconds * 45f), 0, 90);
+        }
+
+        private void DrawModalScore(Rect area, float crestSize)
+        {
+            var mid = area.x + area.width * 0.5f;
+            var crestY = area.y + (area.height - crestSize) * 0.5f;
+            var crestFont = HubTheme.ResponsiveFontSize(78f, 7, 12);
+            HubTheme.Crest(new Rect(mid - area.width * 0.27f - crestSize * 0.5f, crestY, crestSize, crestSize),
+                ClubPrimary32(homeClub), ClubSecondary32(homeClub), CrestInitials(homeClub, homeTeamName),
+                crestFont);
+            HubTheme.Crest(new Rect(mid + area.width * 0.27f - crestSize * 0.5f, crestY, crestSize, crestSize),
+                ClubPrimary32(awayClub), ClubSecondary32(awayClub), CrestInitials(awayClub, awayTeamName),
+                crestFont);
+            GUI.Label(new Rect(area.x, area.y, area.width, area.height), $"{homeScore}  —  {awayScore}",
+                scoreStyle);
+        }
+
+        private static string CrestInitials(WorldClub club, string teamName)
+        {
+            if (club != null && !string.IsNullOrEmpty(club.ShortName))
+                return club.ShortName;
+            if (string.IsNullOrEmpty(teamName))
+                return "?";
+            return teamName.Substring(0, teamName.Length < 3 ? teamName.Length : 3).ToUpperInvariant();
+        }
+
+        private static Color32 ClubPrimary32(WorldClub club)
+        {
+            return club == null ? new Color32(0x2A, 0x4A, 0x66, 0xFF) : ToColor32(club.PrimaryColor);
+        }
+
+        private static Color32 ClubSecondary32(WorldClub club)
+        {
+            return club == null ? new Color32(0x0F, 0x22, 0x33, 0xFF) : ToColor32(club.SecondaryColor);
+        }
+
+        private static Color32 ToColor32(WorldColor color)
+        {
+            return new Color32(
+                (byte)Mathf.Clamp(color.R * 255f, 0f, 255f),
+                (byte)Mathf.Clamp(color.G * 255f, 0f, 255f),
+                (byte)Mathf.Clamp(color.B * 255f, 0f, 255f),
+                0xFF);
         }
 
         // Show the selected player's energy so sprinting and fatigue are visible during play.
@@ -1463,24 +1582,18 @@ namespace FC2026.Core
                 return;
 
             var stamina = Mathf.Clamp01(userPlayer.Stamina01);
-            var previousColor = GUI.color;
-            var y = boardRect.y + 82f;
-            var labelWidth = Mathf.Clamp(boardRect.width * 0.32f, 60f, 92f);
-            var labelRect = new Rect(boardRect.x + 12f, y, labelWidth, 16f);
-            GUI.Label(labelRect, $"STA  {Mathf.RoundToInt(stamina * 100f)}%", labelSmallStyle);
-
-            var barWidth = Mathf.Max(16f, boardRect.width - labelWidth - 36f);
-            var bar = new Rect(labelRect.xMax + 4f, y + 5f, barWidth, 7f);
-            GUI.color = new Color(0.02f, 0.05f, 0.08f, 0.9f);
-            GUI.DrawTexture(bar, Texture2D.whiteTexture);
-
-            GUI.color = stamina < 0.25f
-                ? new Color(0.92f, 0.25f, 0.22f, 0.95f)
+            var width = Mathf.Clamp(boardRect.width * 0.52f, 160f, 340f);
+            var rect = new Rect(boardRect.x + (boardRect.width - width) * 0.5f, boardRect.yMax + 7f, width, 16f);
+            var labelWidth = Mathf.Clamp(width * 0.3f, 52f, 84f);
+            GUI.Label(new Rect(rect.x, rect.y - 1f, labelWidth, rect.height),
+                $"STA  {Mathf.RoundToInt(stamina * 100f)}%", labelSmallStyle);
+            var bar = new Rect(rect.x + labelWidth + 4f, rect.y + 4f, rect.width - labelWidth - 8f, 8f);
+            var fill = stamina < 0.25f
+                ? new Color32(0xEC, 0x40, 0x38, 0xFF)
                 : stamina < 0.55f
-                    ? new Color(0.98f, 0.72f, 0.2f, 0.95f)
-                    : new Color(0.25f, 0.86f, 0.58f, 0.95f);
-            GUI.DrawTexture(new Rect(bar.x, bar.y, bar.width * stamina, bar.height), Texture2D.whiteTexture);
-            GUI.color = previousColor;
+                    ? new Color32(0xFA, 0xB8, 0x33, 0xFF)
+                    : new Color32(0x40, 0xDB, 0x94, 0xFF);
+            HubTheme.Bar(bar, stamina, fill);
         }
 
         private static GUIStyle CreatePanelStyle()
@@ -1595,24 +1708,27 @@ namespace FC2026.Core
             var bottom = safeBottom - 24f;
             var actionSize = Mathf.Clamp(Screen.height * 0.105f, 62f, 88f);
             var gap = actionSize * 0.13f;
+            var actionFont = Mathf.Clamp(Mathf.RoundToInt(actionSize * 0.17f), 9, 15);
+            actionPrimaryStyle ??= HubTheme.CircleButton(actionFont, true);
+            actionSecondaryStyle ??= HubTheme.CircleButton(actionFont);
             Rect ActionRect(int column, int row) => new Rect(
                 right - actionSize - column * (actionSize + gap),
                 bottom - actionSize - row * (actionSize + gap), actionSize, actionSize);
 
-            if (GUI.Button(ActionRect(0, 0), "SHOOT", primaryButtonStyle))
+            if (GUI.Button(ActionRect(0, 0), "SHOOT", actionPrimaryStyle))
                 userPlayer.QueueShot();
-            if (GUI.Button(ActionRect(1, 0), "PASS", buttonStyle))
+            if (GUI.Button(ActionRect(1, 0), "PASS", actionSecondaryStyle))
                 userPlayer.QueuePass();
-            if (GUI.Button(ActionRect(0, 1), "TACKLE", buttonStyle))
+            if (GUI.Button(ActionRect(0, 1), "TACKLE", actionSecondaryStyle))
                 userPlayer.QueueTackle();
-            if (GUI.Button(ActionRect(1, 1), "THROUGH", buttonStyle))
+            if (GUI.Button(ActionRect(1, 1), "THROUGH", actionSecondaryStyle))
                 userPlayer.QueueThroughBall();
-            var sprint = GUI.RepeatButton(ActionRect(0, 2), "SPRINT", buttonStyle);
-            if (GUI.Button(ActionRect(1, 2), "SWITCH", buttonStyle))
+            var sprint = GUI.RepeatButton(ActionRect(0, 2), "SPRINT", actionSecondaryStyle);
+            if (GUI.Button(ActionRect(1, 2), "SWITCH", actionSecondaryStyle))
                 userPlayer.SwitchToNearestTeammate();
-            if (GUI.Button(ActionRect(0, 3), "CHIP", buttonStyle))
+            if (GUI.Button(ActionRect(0, 3), "CHIP", actionSecondaryStyle))
                 userPlayer.QueueChipShot();
-            if (GUI.Button(ActionRect(1, 3), "FINESSE", buttonStyle))
+            if (GUI.Button(ActionRect(1, 3), "FINESSE", actionSecondaryStyle))
                 userPlayer.QueueFinesseShot();
 
             // Keep the analogue stick live while another finger taps an action.
@@ -1625,12 +1741,17 @@ namespace FC2026.Core
         {
             if (joystickDisc == null)
                 CreateJoystickTexture();
-            GUI.color = new Color(0.03f, 0.08f, 0.13f, 0.55f);
-            GUI.DrawTexture(new Rect(center.x - radius, center.y - radius, radius * 2f, radius * 2f), joystickDisc);
-            var knobRadius = radius * 0.39f;
-            GUI.color = new Color(0.32f, 0.9f, 0.68f, 0.83f);
+            GUI.color = new Color(0.03f, 0.08f, 0.13f, 0.45f);
+            GUI.DrawTexture(new Rect(center.x - radius, center.y - radius, radius * 2f, radius * 2f),
+                joystickDisc);
+            GUI.color = new Color(0.31f, 0.86f, 0.97f, 0.9f);
+            GUI.DrawTexture(new Rect(center.x - radius, center.y - radius, radius * 2f, radius * 2f),
+                HubTheme.RingTexture());
+            var knobRadius = radius * 0.37f;
             var knobCenter = center + offset;
-            GUI.DrawTexture(new Rect(knobCenter.x - knobRadius, knobCenter.y - knobRadius, knobRadius * 2f, knobRadius * 2f), joystickDisc);
+            GUI.color = new Color(0.9f, 0.97f, 1f, 0.92f);
+            GUI.DrawTexture(new Rect(knobCenter.x - knobRadius, knobCenter.y - knobRadius,
+                knobRadius * 2f, knobRadius * 2f), joystickDisc);
             GUI.color = Color.white;
         }
 
