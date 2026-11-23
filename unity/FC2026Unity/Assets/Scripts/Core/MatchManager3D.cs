@@ -169,6 +169,13 @@ namespace FC2026.Core
             if (paused)
                 return;
 
+            if (Input.GetKeyDown(KeyCode.Alpha1))
+                ApplyHomeTactic(MatchTacticPreset.Balanced);
+            else if (Input.GetKeyDown(KeyCode.Alpha2))
+                ApplyHomeTactic(MatchTacticPreset.HighPress);
+            else if (Input.GetKeyDown(KeyCode.Alpha3))
+                ApplyHomeTactic(MatchTacticPreset.CounterAttack);
+
             if (userPlayer == null || !userPlayer.IsUserControlled)
                 FindUserPlayer();
 
@@ -1481,8 +1488,8 @@ namespace FC2026.Core
 
                 var buttonX = panel.x + panel.width * 0.14f;
                 var buttonWidth = panel.width * 0.72f;
-                const float buttonHeight = 42f;
-                const float buttonGap = 7f;
+                var buttonHeight = Mathf.Clamp((panel.height - 220f) / 4f, 30f, 42f);
+                const float buttonGap = 5f;
                 var buttonY = panel.y + 198f;
 
                 if (confirm)
@@ -1512,6 +1519,19 @@ namespace FC2026.Core
                         "RESUME MATCH", flowButtonStyle))
                         ResumeMatch();
                     buttonY += buttonHeight + buttonGap;
+
+                    var nextTactic = (MatchTacticPreset)(((int)selectedTactic + 1) % 3);
+                    var tacticName = selectedTactic switch
+                    {
+                        MatchTacticPreset.Balanced => "BALANCED",
+                        MatchTacticPreset.HighPress => "HIGH PRESS",
+                        _ => "COUNTER ATTACK"
+                    };
+                    if (GUI.Button(new Rect(buttonX, buttonY, buttonWidth, buttonHeight),
+                        $"TEAM TACTIC: {tacticName}", buttonStyle))
+                        ApplyHomeTactic(nextTactic);
+                    buttonY += buttonHeight + buttonGap;
+
                     if (GUI.Button(new Rect(buttonX, buttonY, buttonWidth, buttonHeight),
                         "RESTART MATCH", buttonStyle))
                         confirmRestart = true;

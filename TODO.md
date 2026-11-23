@@ -12,6 +12,7 @@
 - [x] Improve off-ball support runs, attacking width, and coordinated pressing.
 - [x] Improve goalkeeper positioning and shot-reaction decisions with goal-side alignment and predicted shot-plane interception.
 - [x] Add halftime team tactics: balanced, high press, and counter attack.
+- [x] Allow tactical presets to be changed from the pause menu and keyboard during live play.
 - [x] Add contextual movement animation for turns and ball-carrying, with sprinting, passing, and shooting actions.
 
 ## Mobile quality
