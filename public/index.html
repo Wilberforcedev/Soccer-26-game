@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#071622">
+  <meta name="description" content="Soccer 27 is a mobile-first football game built in Unity 6.3. Explore the 3D match prototype and worldwide fictional career world.">
+  <title>Soccer 27 — Football, built for mobile</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #eaf5f8;
+      --muted: #a9bec8;
+      --base: #071622;
+      --panel: #102531;
+      --line: rgba(180, 218, 231, .14);
+      --cyan: #44d2df;
+      --lime: #d5f36d;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        radial-gradient(ellipse at 50% -20%, rgba(50, 160, 175, .2), transparent 55%),
+        var(--base);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    a { color: inherit; }
+    .wrap { width: min(1100px, calc(100% - 40px)); margin: 0 auto; }
+    header { display: flex; align-items: center; justify-content: space-between; padding: 28px 0; }
+    .brand { display: flex; align-items: center; gap: 12px; font-size: .86rem; font-weight: 800; letter-spacing: .14em; }
+    .mark {
+      display: grid; place-items: center; width: 38px; height: 38px; border: 1px solid rgba(68, 210, 223, .6);
+      border-radius: 12px; color: var(--cyan); font-size: .75rem; letter-spacing: -.04em;
+      background: linear-gradient(145deg, rgba(68, 210, 223, .15), rgba(68, 210, 223, .02));
+    }
+    .version { color: var(--muted); font-size: .82rem; }
+    main { padding: clamp(52px, 10vw, 120px) 0 72px; }
+    .hero { max-width: 790px; }
+    .eyebrow { color: var(--lime); font-size: .73rem; font-weight: 800; letter-spacing: .19em; text-transform: uppercase; }
+    h1 { margin: 20px 0 18px; max-width: 720px; font-size: clamp(3rem, 9vw, 6.6rem); line-height: .98; letter-spacing: -.075em; }
+    h1 span { color: var(--cyan); }
+    .intro { max-width: 620px; color: var(--muted); font-size: clamp(1rem, 2vw, 1.18rem); line-height: 1.75; }
+    .actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 32px 0 0; }
+    .button {
+      display: inline-flex; min-height: 48px; align-items: center; justify-content: center; gap: 9px;
+      padding: 0 18px; border: 1px solid var(--line); border-radius: 12px; text-decoration: none; font-weight: 750;
+      transition: transform .15s ease, border-color .15s ease, background .15s ease;
+    }
+    .button:hover { transform: translateY(-2px); border-color: var(--cyan); }
+    .button.primary { border-color: var(--cyan); color: #04202a; background: var(--cyan); }
+    .button.secondary { background: rgba(255,255,255,.035); }
+    .overview { display: grid; grid-template-columns: 1.15fr .85fr; gap: 18px; margin-top: clamp(64px, 11vw, 112px); }
+    .card { min-height: 220px; padding: 26px; border: 1px solid var(--line); border-radius: 18px; background: linear-gradient(145deg, rgba(19, 47, 61, .92), rgba(12, 30, 41, .9)); }
+    .card h2 { margin: 0 0 12px; font-size: 1.02rem; letter-spacing: .02em; }
+    .card p, .card li { color: var(--muted); font-size: .93rem; line-height: 1.7; }
+    .card p { margin: 0; }
+    .features { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 22px; margin: 20px 0 0; padding: 0; list-style: none; }
+    .features li::before { content: "↗"; margin-right: 9px; color: var(--lime); }
+    .status { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 18px; color: var(--lime); font-size: .72rem; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
+    .status::before { width: 7px; height: 7px; border-radius: 50%; background: var(--lime); content: ""; box-shadow: 0 0 12px rgba(213, 243, 109, .7); }
+    .note { margin-top: 20px !important; }
+    footer { display: flex; justify-content: space-between; gap: 16px; padding: 20px 0 30px; border-top: 1px solid var(--line); color: var(--muted); font-size: .8rem; }
+    footer a { text-decoration-color: rgba(169, 190, 200, .45); text-underline-offset: 3px; }
+    @media (max-width: 760px) {
+      .overview { grid-template-columns: 1fr; margin-top: 64px; }
+      .card { min-height: auto; }
+      header { padding: 20px 0; }
+      footer { flex-direction: column; }
+    }
+    @media (max-width: 480px) {
+      .wrap { width: min(100% - 28px, 1100px); }
+      .features { grid-template-columns: 1fr; }
+      .card { padding: 21px; }
+      .version { font-size: .74rem; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand"><span class="mark" aria-hidden="true">S27</span><span>SOCCER 27</span></div>
+      <div class="version">Unity 6.3 LTS · Android first</div>
+    </header>
+
+    <main>
+      <section class="hero" aria-labelledby="title">
+        <div class="eyebrow">A football world in your hands</div>
+        <h1 id="title">Build your club.<br><span>Own the match.</span></h1>
+        <p class="intro">A mobile-first football game with a physical 3D match, a worldwide fictional career universe, and a growing set of ways to shape your team.</p>
+        <div class="actions">
+          <a class="button primary" href="https://github.com/Wilberforcedev/Soccer-26-game/blob/main/UNITY_3D.md">Open the Unity setup guide <span aria-hidden="true">↗</span></a>
+          <a class="button secondary" href="https://github.com/Wilberforcedev/Soccer-26-game">Explore the source <span aria-hidden="true">↗</span></a>
+        </div>
+      </section>
+
+      <section class="overview" aria-label="Project overview">
+        <article class="card">
+          <div class="status">Active build</div>
+          <h2>3D football, from kickoff to career</h2>
+          <p>The current match and Android build live in the Unity project. Open the setup guide for the required editor version, controls, and build steps.</p>
+          <ul class="features">
+            <li>Responsive 3D match controls</li>
+            <li>Player roles and positional AI</li>
+            <li>Leagues, cups, and transfers</li>
+            <li>Fictional clubs and players</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h2>About this page</h2>
+          <p>This site is the project landing page. Soccer 27's active match is built for Unity and Android; this page does not run the match in a browser.</p>
+          <p class="note">The project is evolving. Follow the repository for source updates and build instructions.</p>
+        </article>
+      </section>
+    </main>
+
+    <footer>
+      <span>Soccer 27 · A fictional football world</span>
+      <a href="https://github.com/Wilberforcedev/Soccer-26-game">GitHub repository</a>
+    </footer>
+  </div>
+</body>
+</html>
