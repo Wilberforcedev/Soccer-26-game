@@ -1807,8 +1807,11 @@ namespace FC2026.Core
                 right - actionSize - column * (actionSize + gap),
                 bottom - actionSize - row * (actionSize + gap), actionSize, actionSize);
 
-            if (GUI.Button(ActionRect(0, 0), "SHOOT", actionPrimaryStyle))
-                userPlayer.QueueShot();
+            var shotHeld = GUI.RepeatButton(
+                ActionRect(0, 0),
+                userPlayer.ShotCharge01 > 0.04f ? $"SHOOT {Mathf.RoundToInt(userPlayer.ShotCharge01 * 100f)}%" : "SHOOT",
+                actionPrimaryStyle);
+            userPlayer.SetMobileShotHeld(shotHeld);
             if (GUI.Button(ActionRect(1, 0), "PASS", actionSecondaryStyle))
                 userPlayer.QueuePass();
             if (GUI.Button(ActionRect(0, 1), "TACKLE", actionSecondaryStyle))

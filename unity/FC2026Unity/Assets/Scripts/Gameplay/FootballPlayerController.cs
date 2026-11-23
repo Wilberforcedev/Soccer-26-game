@@ -13,6 +13,7 @@ namespace FC2026.Gameplay
         private static float previousSwitchAt = -99f;
         private const float SwitchCycleWindow = 1.1f;
         private const float MaxTackleBallHeight = 1.55f;
+        private const float ShotChargeDuration = 0.9f;
 
         [SerializeField] private float moveSpeed = 7.1f;
         [SerializeField] private float sprintSpeed = 9.7f;
@@ -31,6 +32,10 @@ namespace FC2026.Gameplay
         private bool chipShotQueued;
         private bool finesseShotQueued;
         private bool tackleQueued;
+        private bool mobileShotHeld;
+        private bool shotChargeInputHeld;
+        private float shotChargeTime;
+        private float queuedShotPower01;
         private Vector3 lastMoveDirection = Vector3.forward;
         private Vector2 mobileMove;
         private bool mobileSprint;
@@ -57,6 +62,7 @@ namespace FC2026.Gameplay
         public float PassingStat => passingStat;
         public float DefendingStat => defendingStat;
         public float PhysicalStat => physicalStat;
+        public float ShotCharge01 => Mathf.Clamp01(shotChargeTime / ShotChargeDuration);
         public bool IsGoalkeeper => Role == PlayerRole.Goalkeeper;
         public bool HasBall => BallController.Instance != null && BallController.Instance.IsOwnedBy(this);
         public Vector3 LastMoveDirection => lastMoveDirection;
@@ -161,10 +167,22 @@ namespace FC2026.Gameplay
             {
                 mobileMove = Vector2.zero;
                 mobileSprint = false;
+                mobileShotHeld = false;
             }
 
-            if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.JoystickButton0))
+            var shotHeld = mobileShotHeld || Input.GetKey(KeyCode.Space) || Input.GetKey(KeyCode.JoystickButton0);
+            if (shotHeld)
+            {
+                shotChargeTime = Mathf.Min(ShotChargeDuration, shotChargeTime + Time.deltaTime);
+            }
+            else if (shotChargeInputHeld)
+            {
+                queuedShotPower01 = ShotCharge01;
+                shotChargeTime = 0f;
                 shootQueued = true;
+            }
+            shotChargeInputHeld = shotHeld;
+
             if (Input.GetKeyDown(KeyCode.E) || Input.GetKeyDown(KeyCode.JoystickButton2))
                 passQueued = true;
             if (Input.GetKeyDown(KeyCode.Q))
@@ -250,7 +268,8 @@ namespace FC2026.Gameplay
             if (shootQueued)
             {
                 shootQueued = false;
-                AttemptShot(chipShotQueued, finesseShotQueued);
+                AttemptShot(chipShotQueued, finesseShotQueued, null, queuedShotPower01);
+                queuedShotPower01 = 0f;
                 chipShotQueued = false;
                 finesseShotQueued = false;
             }
@@ -316,11 +335,13 @@ namespace FC2026.Gameplay
             mobileSprint = sprint;
         }
 
+        public void SetMobileShotHeld(bool held) => mobileShotHeld = held;
+
         public void QueuePass() => passQueued = true;
         public void QueueThroughBall() => throughBallQueued = true;
-        public void QueueShot() => shootQueued = true;
-        public void QueueChipShot() { chipShotQueued = true; shootQueued = true; }
-        public void QueueFinesseShot() { finesseShotQueued = true; shootQueued = true; }
+        public void QueueShot() { queuedShotPower01 = 0f; shootQueued = true; }
+        public void QueueChipShot() { queuedShotPower01 = 0f; chipShotQueued = true; shootQueued = true; }
+        public void QueueFinesseShot() { queuedShotPower01 = 0f; finesseShotQueued = true; shootQueued = true; }
         public void QueueTackle() => tackleQueued = true;
 
         public void ClearQueuedActions()
@@ -331,6 +352,10 @@ namespace FC2026.Gameplay
             chipShotQueued = false;
             finesseShotQueued = false;
             tackleQueued = false;
+            mobileShotHeld = false;
+            shotChargeInputHeld = false;
+            shotChargeTime = 0f;
+            queuedShotPower01 = 0f;
         }
 
         public FootballPlayerController SwitchToNearestTeammate()
@@ -451,7 +476,7 @@ namespace FC2026.Gameplay
 
         public float SelectShotTargetX() => ChooseShotTargetX();
 
-        public bool AttemptShot(bool chip = false, bool finesse = false, float? targetXOverride = null)
+        public bool AttemptShot(bool chip = false, bool finesse = false, float? targetXOverride = null, float powerCharge01 = 0f)
         {
             var ball = BallController.Instance;
             if (!CanPlayBall(ball) || kickLock > 0f)
@@ -477,14 +502,16 @@ namespace FC2026.Gameplay
                            * Mathf.Clamp01(1.18f - distance * 0.011f)
                            * Mathf.Lerp(0.82f, 1f, stamina)
                            * footAccuracy
-                           * pressureAccuracy;
+                           * pressureAccuracy
+                           * Mathf.Lerp(1f, 0.9f, Mathf.Clamp01(powerCharge01));
             var error = (1f - accuracy) * (0.10f + distance * 0.0035f);
             flat = (flat + transform.right * Random.Range(-error, error)).normalized;
 
             // Longer shots need more pace; BallController still enforces the global speed limit.
             var distancePower = Mathf.Lerp(1f, 1.4f, Mathf.InverseLerp(20f, 44f, distance));
             var power = Mathf.Lerp(15.5f, 26.5f, shootingStat) *
-                        Mathf.Lerp(0.92f, 1.07f, Mathf.Clamp01(distance / 36f)) * distancePower;
+                        Mathf.Lerp(0.92f, 1.07f, Mathf.Clamp01(distance / 36f)) * distancePower *
+                        Mathf.Lerp(1f, 1.2f, Mathf.Clamp01(powerCharge01));
             if (chip) power *= 0.72f;
             else if (finesse) power *= 0.95f;
 
