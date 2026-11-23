@@ -9,6 +9,9 @@ namespace FC2026.Gameplay
     public sealed class FootballPlayerController : MonoBehaviour
     {
         private static readonly List<FootballPlayerController> Registry = new();
+        private static FootballPlayerController previousSwitchSource;
+        private static float previousSwitchAt = -99f;
+        private const float SwitchCycleWindow = 1.1f;
         private const float MaxTackleBallHeight = 1.55f;
 
         [SerializeField] private float moveSpeed = 7.1f;
@@ -334,8 +337,14 @@ namespace FC2026.Gameplay
         {
             var ball = BallController.Instance;
             var reference = ball != null ? ball.Position : transform.position;
+            var cyclePrevious = Time.time - previousSwitchAt <= SwitchCycleWindow
+                ? previousSwitchSource
+                : null;
             FootballPlayerController nearest = null;
+            FootballPlayerController previousFallback = null;
             var nearestDistance = float.MaxValue;
+            var fallbackDistance = float.MaxValue;
+
             foreach (var candidate in Registry)
             {
                 if (candidate == null || candidate == this || candidate.TeamDirection != TeamDirection ||
@@ -344,15 +353,35 @@ namespace FC2026.Gameplay
 
                 var toBall = candidate.transform.position - reference;
                 toBall.y = 0f;
-                if (toBall.sqrMagnitude < nearestDistance)
+                var distance = toBall.sqrMagnitude;
+
+                // Consecutive switch taps cycle past the player we just left,
+                // instead of snapping straight back to that same player.
+                if (candidate == cyclePrevious)
                 {
-                    nearestDistance = toBall.sqrMagnitude;
+                    if (distance < fallbackDistance)
+                    {
+                        fallbackDistance = distance;
+                        previousFallback = candidate;
+                    }
+                    continue;
+                }
+
+                if (distance < nearestDistance)
+                {
+                    nearestDistance = distance;
                     nearest = candidate;
                 }
             }
 
+            // Keep switching functional in small squads with no alternate outfielder.
+            if (nearest == null)
+                nearest = previousFallback;
             if (nearest == null)
                 return this;
+
+            previousSwitchSource = this;
+            previousSwitchAt = Time.time;
 
             var oldAi = GetComponent<SimpleFootballAI>();
             if (oldAi != null) oldAi.enabled = true;

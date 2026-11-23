@@ -6,6 +6,7 @@
 - [x] Keep defending players closer to a goal-side position while preserving their starting shape.
 - [x] Add acceleration to carried-ball movement so the ball responds less like it is attached to the player.
 - [x] Make difficult first touches more likely under pressure and at higher incoming ball speeds.
+- [x] Let consecutive defensive switches cycle to another nearby outfielder instead of immediately returning to the last player.
 - [ ] Tune the new decisions and ball response through in-game play on desktop and Android.
 - [x] Improve off-ball support runs, attacking width, and coordinated pressing.
 - [x] Improve goalkeeper positioning and shot-reaction decisions with goal-side alignment and predicted shot-plane interception.
