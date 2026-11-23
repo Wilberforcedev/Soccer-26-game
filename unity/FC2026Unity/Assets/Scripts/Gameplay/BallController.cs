@@ -185,11 +185,57 @@ namespace FC2026.Gameplay
             if (owner != null)
                 ReleasePossession(false);
 
+            if (TryApplyHeavyFirstTouch(player))
+                return;
+
             owner = player;
             LastKicker = player.transform;
             lastTouchTime = Time.time;
             cooldownUntil = Time.time + 0.1f;
             IgnoreCollisionsWith(player, 0.4f);
+        }
+
+        private bool TryApplyHeavyFirstTouch(FootballPlayerController player)
+        {
+            var incoming = body.linearVelocity;
+            var horizontal = new Vector3(incoming.x, 0f, incoming.z);
+            var horizontalSpeed = horizontal.magnitude;
+            if (horizontalSpeed < 8f || transform.position.y > 0.65f || incoming.y > 3.2f)
+                return false;
+
+            var controlSkill = Mathf.Clamp01(player.PassingStat * 0.55f + player.PhysicalStat * 0.45f);
+            var nearestOpponent = float.PositiveInfinity;
+            foreach (var candidate in FootballPlayerController.All)
+            {
+                if (candidate == null || candidate == player || candidate.TeamId == player.TeamId)
+                    continue;
+
+                var separation = candidate.transform.position - player.transform.position;
+                separation.y = 0f;
+                nearestOpponent = Mathf.Min(nearestOpponent, separation.magnitude);
+            }
+
+            var pressure = float.IsPositiveInfinity(nearestOpponent)
+                ? 0f
+                : 1f - Mathf.InverseLerp(1.25f, 5.5f, nearestOpponent);
+            var speedSeverity = Mathf.InverseLerp(8f, 20f, horizontalSpeed);
+            var miscontrolChance = (1f - controlSkill) * 0.2f +
+                                   pressure * speedSeverity * Mathf.Lerp(0.36f, 0.12f, controlSkill);
+            if (Random.value >= miscontrolChance)
+                return false;
+
+            var incomingDirection = horizontal.normalized;
+            var facing = Vector3.ProjectOnPlane(player.transform.forward, Vector3.up).normalized;
+            var deflection = Mathf.Lerp(0.4f, 0.08f, controlSkill);
+            var looseDirection = Vector3.Slerp(incomingDirection, facing, deflection).normalized;
+            var retainedSpeed = horizontalSpeed * Mathf.Lerp(0.74f, 0.48f, controlSkill);
+            body.linearVelocity = looseDirection * retainedSpeed + Vector3.up * incoming.y;
+            body.angularVelocity *= 0.82f;
+
+            LastKicker = player.transform;
+            lastTouchTime = Time.time;
+            cooldownUntil = Time.time + 0.14f;
+            return true;
         }
 
         public void ForcePossession(FootballPlayerController player)
