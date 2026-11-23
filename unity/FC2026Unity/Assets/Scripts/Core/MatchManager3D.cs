@@ -79,6 +79,7 @@ namespace FC2026.Core
         private CareerSaveData careerSave;
         private CareerNextFixture nextFixture;
         private bool cupTie;
+        private MatchTacticPreset selectedTactic = MatchTacticPreset.Balanced;
         private bool cupShootoutPending;
         private CareerShootout cupShootout;
         private string matchLabel = "LEAGUE";
@@ -357,6 +358,20 @@ namespace FC2026.Core
             }
 
             FinishMatch();
+        }
+
+        private void ApplyHomeTactic(MatchTacticPreset preset)
+        {
+            selectedTactic = preset;
+            foreach (var player in FootballPlayerController.All)
+            {
+                if (player == null || player.TeamId != 1)
+                    continue;
+
+                var ai = player.GetComponent<SimpleFootballAI>();
+                if (ai != null)
+                    ai.SetTacticPreset(preset);
+            }
         }
 
         public void BeginSecondHalf()
@@ -1525,6 +1540,21 @@ namespace FC2026.Core
                 GUI.Label(new Rect(panel.x + 12f, panel.y + 164f, panel.width - 24f, 18f),
                     $"{CurrentMinute():00}'", clockStyle);
                 DrawMatchStats(panel, panel.y + 184f);
+                GUI.Label(new Rect(panel.x + 12f, panel.y + 260f, panel.width - 24f, 16f),
+                    "SECOND-HALF TEAM TACTICS", brandStyle);
+                var tacticGap = 6f;
+                var tacticWidth = (panel.width - 36f - tacticGap * 2f) / 3f;
+                var tacticY = panel.y + 278f;
+                var tacticHeight = 32f;
+                if (GUI.Button(new Rect(panel.x + 18f, tacticY, tacticWidth, tacticHeight),
+                    selectedTactic == MatchTacticPreset.Balanced ? "BALANCED ✓" : "BALANCED", buttonStyle))
+                    ApplyHomeTactic(MatchTacticPreset.Balanced);
+                if (GUI.Button(new Rect(panel.x + 18f + tacticWidth + tacticGap, tacticY, tacticWidth, tacticHeight),
+                    selectedTactic == MatchTacticPreset.HighPress ? "HIGH PRESS ✓" : "HIGH PRESS", buttonStyle))
+                    ApplyHomeTactic(MatchTacticPreset.HighPress);
+                if (GUI.Button(new Rect(panel.x + 18f + (tacticWidth + tacticGap) * 2f, tacticY, tacticWidth, tacticHeight),
+                    selectedTactic == MatchTacticPreset.CounterAttack ? "COUNTER ✓" : "COUNTER", buttonStyle))
+                    ApplyHomeTactic(MatchTacticPreset.CounterAttack);
                 if (GUI.Button(new Rect(panel.x + panel.width * 0.16f, panel.yMax - 72f,
                     panel.width * 0.68f, 52f), "START SECOND HALF", flowButtonStyle))
                     BeginSecondHalf();

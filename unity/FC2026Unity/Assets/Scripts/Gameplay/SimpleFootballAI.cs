@@ -3,6 +3,13 @@ using FC2026.Core;
 
 namespace FC2026.Gameplay
 {
+    public enum MatchTacticPreset
+    {
+        Balanced,
+        HighPress,
+        CounterAttack
+    }
+
     [RequireComponent(typeof(FootballPlayerController))]
     public sealed class SimpleFootballAI : MonoBehaviour
     {
@@ -22,8 +29,11 @@ namespace FC2026.Gameplay
         private float actionTimer;
         private float tackleTimer;
         private float diveTimer;
+        private MatchTacticPreset tacticPreset = MatchTacticPreset.Balanced;
 
         public int TeamDirection => attackDirection;
+
+        public void SetTacticPreset(MatchTacticPreset preset) => tacticPreset = preset;
 
         public void FlipSides()
         {
@@ -515,7 +525,18 @@ namespace FC2026.Gameplay
             // AI players lose pace as stamina falls, matching user-controlled movement.
             var stamina = controller != null ? controller.Stamina01 : 1f;
             // Apply match tuning without changing the serialized base speed across configurations.
-            speed *= configuredSpeedMultiplier * Mathf.Lerp(0.74f, 1f, stamina);
+            var tacticalMultiplier = 1f;
+            var ball = BallController.Instance;
+            if (!goalkeeper && ball != null && controller != null)
+            {
+                var defending = ball.Owner == null || ball.Owner.TeamId != controller.TeamId;
+                if (tacticPreset == MatchTacticPreset.HighPress && defending)
+                    tacticalMultiplier = 1.16f;
+                else if (tacticPreset == MatchTacticPreset.CounterAttack && !defending)
+                    tacticalMultiplier = 1.12f;
+            }
+
+            speed *= configuredSpeedMultiplier * Mathf.Lerp(0.74f, 1f, stamina) * tacticalMultiplier;
 
             var self = Flat(transform.position);
             var direction = target - self;
