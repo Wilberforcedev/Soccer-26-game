@@ -34,6 +34,12 @@ namespace FC2026.Core
         private float autoSwitchTimer;
         private float homePossession;
         private float awayPossession;
+        private int homeShots;
+        private int awayShots;
+        private int homeShotsOnTarget;
+        private int awayShotsOnTarget;
+        private int homeTacklesWon;
+        private int awayTacklesWon;
         private GUIStyle scoreStyle;
         private GUIStyle helpStyle;
         private GUIStyle goalStyle;
@@ -231,6 +237,9 @@ namespace FC2026.Core
             awayScore = 0;
             homePossession = 0f;
             awayPossession = 0f;
+            homeShots = awayShots = 0;
+            homeShotsOnTarget = awayShotsOnTarget = 0;
+            homeTacklesWon = awayTacklesWon = 0;
             half = 0;
             halfElapsed = 0f;
             matchElapsed = 0f;
@@ -276,6 +285,26 @@ namespace FC2026.Core
 
             if (owner.TeamId == 1) homePossession += Time.deltaTime;
             else awayPossession += Time.deltaTime;
+        }
+
+        public void RecordShot(int teamId, bool onTarget)
+        {
+            if (teamId == 1)
+            {
+                homeShots++;
+                if (onTarget) homeShotsOnTarget++;
+            }
+            else
+            {
+                awayShots++;
+                if (onTarget) awayShotsOnTarget++;
+            }
+        }
+
+        public void RecordTackleWon(int teamId)
+        {
+            if (teamId == 1) homeTacklesWon++;
+            else awayTacklesWon++;
         }
 
         private void UpdateAutoSwitch()
@@ -1483,7 +1512,7 @@ namespace FC2026.Core
                 fullTimeStyle ??= CreatePanelStyle();
                 var panel = HubTheme.CenteredPanel(
                     Mathf.Min(Screen.width * 0.68f, 620f),
-                    Mathf.Min(Mathf.Max(Screen.height * 0.46f, 320f), 380f),
+                    Mathf.Min(Mathf.Max(Screen.height * 0.5f, 360f), 400f),
                     12f);
                 GUI.Box(panel, string.Empty, panelStyle);
                 GUI.Label(new Rect(panel.x + 12f, panel.y + 10f, panel.width - 24f, 20f), "SOCCER 27",
@@ -1495,6 +1524,7 @@ namespace FC2026.Core
                     $"{homeTeamName}  {homeScore}  —  {awayScore}  {awayTeamName}", labelSmallStyle);
                 GUI.Label(new Rect(panel.x + 12f, panel.y + 164f, panel.width - 24f, 18f),
                     $"{CurrentMinute():00}'", clockStyle);
+                DrawMatchStats(panel, panel.y + 184f);
                 if (GUI.Button(new Rect(panel.x + panel.width * 0.16f, panel.yMax - 72f,
                     panel.width * 0.68f, 52f), "START SECOND HALF", flowButtonStyle))
                     BeginSecondHalf();
@@ -1521,6 +1551,7 @@ namespace FC2026.Core
                     GUI.Label(new Rect(panel.x + 12f, panel.y + 186f, panel.width - 24f, 30f),
                         $"SHOOTOUT  {cupShootout.UserScore} — {cupShootout.OpponentScore}  •  {(cupShootout.UserWon ? homeTeamName + " ADVANCE" : awayTeamName + " ADVANCE")}",
                         labelSmallStyle);
+                DrawMatchStats(panel, panel.y + (cupShootoutPending ? 218f : 194f));
                 if (GUI.Button(new Rect(panel.x + panel.width * 0.15f, panel.yMax - 72f,
                     panel.width * 0.7f, 52f), "SAVE RESULT & RETURN TO CAREER", flowButtonStyle))
                     CompleteCareerMatch();
@@ -1530,6 +1561,37 @@ namespace FC2026.Core
         private int CurrentMinute()
         {
             return Mathf.Clamp(half * 45 + Mathf.FloorToInt(halfElapsed / HalfDurationSeconds * 45f), 0, 90);
+        }
+
+        private void DrawMatchStats(Rect panel, float top)
+        {
+            GUI.Label(new Rect(panel.x + 12f, top, panel.width - 24f, 18f), "MATCH STATS", brandStyle);
+
+            var possessionTotal = homePossession + awayPossession;
+            var homePossessionPercent = possessionTotal > 0.01f
+                ? Mathf.RoundToInt(homePossession / possessionTotal * 100f)
+                : 50;
+            var awayPossessionPercent = 100 - homePossessionPercent;
+            var contentX = panel.x + 18f;
+            var contentWidth = panel.width - 36f;
+            var sideWidth = contentWidth * 0.25f;
+            var metricWidth = contentWidth - sideWidth * 2f;
+            DrawMatchStatRow(contentX, top + 14f, sideWidth, metricWidth,
+                $"{homePossessionPercent}%", "POSSESSION", $"{awayPossessionPercent}%");
+            DrawMatchStatRow(contentX, top + 28f, sideWidth, metricWidth,
+                homeShots.ToString(), "SHOTS", awayShots.ToString());
+            DrawMatchStatRow(contentX, top + 42f, sideWidth, metricWidth,
+                homeShotsOnTarget.ToString(), "ON TARGET", awayShotsOnTarget.ToString());
+            DrawMatchStatRow(contentX, top + 56f, sideWidth, metricWidth,
+                homeTacklesWon.ToString(), "TACKLES WON", awayTacklesWon.ToString());
+        }
+
+        private void DrawMatchStatRow(float x, float y, float sideWidth, float metricWidth,
+            string homeValue, string metric, string awayValue)
+        {
+            GUI.Label(new Rect(x, y, sideWidth, 14f), homeValue, labelSmallStyle);
+            GUI.Label(new Rect(x + sideWidth, y, metricWidth, 14f), metric, labelSmallStyle);
+            GUI.Label(new Rect(x + sideWidth + metricWidth, y, sideWidth, 14f), awayValue, labelSmallStyle);
         }
 
         private void DrawModalScore(Rect area, float crestSize)
