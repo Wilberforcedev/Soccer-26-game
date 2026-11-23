@@ -389,6 +389,7 @@ namespace FC2026.Gameplay
                 if (!ball.IsFree)
                     return false;
                 ball.Claim(this);
+                MatchManager3D.Instance?.RecordTackleWon(TeamId);
                 return true;
             }
 
@@ -408,6 +409,7 @@ namespace FC2026.Gameplay
                 return false;
 
             ball.Steal(this);
+            MatchManager3D.Instance?.RecordTackleWon(TeamId);
             return true;
         }
 
@@ -462,8 +464,32 @@ namespace FC2026.Gameplay
 
             motion?.TriggerShot(useLeftFoot);
             ball.Kick(flat, power, lift, transform, curve);
+            MatchManager3D.Instance?.RecordShot(TeamId, IsShotOnTarget(ball, goalZ));
             kickLock = 0.32f;
             return true;
+        }
+
+        private static bool IsShotOnTarget(BallController ball, float goalZ)
+        {
+            if (ball == null)
+                return false;
+
+            var velocity = ball.Velocity;
+            if (Mathf.Abs(velocity.z) < 0.01f)
+                return false;
+
+            var timeToGoal = (goalZ - ball.Position.z) / velocity.z;
+            if (timeToGoal <= 0f)
+                return false;
+
+            var crossingX = ball.Position.x + velocity.x * timeToGoal;
+            var crossingY = ball.Position.y + velocity.y * timeToGoal +
+                            0.5f * Physics.gravity.y * timeToGoal * timeToGoal;
+            const float ballRadius = 0.11f;
+            const float goalHalfWidth = 3.66f;
+            const float goalHeight = 2.44f;
+            return Mathf.Abs(crossingX) <= goalHalfWidth - ballRadius &&
+                   crossingY >= ballRadius * 0.5f && crossingY <= goalHeight - ballRadius;
         }
 
         private float ChooseShotTargetX()
