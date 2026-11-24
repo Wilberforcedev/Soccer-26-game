@@ -14,6 +14,7 @@ namespace FC2026.Gameplay
         private const float SwitchCycleWindow = 1.1f;
         private const float MaxTackleBallHeight = 1.55f;
         private const float ShotChargeDuration = 0.9f;
+        private const float LoftPassHoldDuration = 0.28f;
 
         [SerializeField] private float moveSpeed = 7.1f;
         [SerializeField] private float sprintSpeed = 9.7f;
@@ -27,6 +28,10 @@ namespace FC2026.Gameplay
         private Rigidbody body;
         private FootballMotionAnimator motion;
         private bool passQueued;
+        private bool loftedPassQueued;
+        private bool passInputHeld;
+        private bool mobilePassHeld;
+        private float passHoldTime;
         private bool throughBallQueued;
         private bool shootQueued;
         private bool chipShotQueued;
@@ -66,6 +71,7 @@ namespace FC2026.Gameplay
         public float DefendingStat => defendingStat;
         public float PhysicalStat => physicalStat;
         public float ShotCharge01 => Mathf.Clamp01(shotChargeTime / ShotChargeDuration);
+        public float PassHold01 => Mathf.Clamp01(passHoldTime / LoftPassHoldDuration);
         public bool IsShielding => IsUserControlled && HasBall &&
                                    (mobileShieldHeld || Input.GetKey(KeyCode.V));
         public bool IsGoalkeeper => Role == PlayerRole.Goalkeeper;
@@ -175,10 +181,26 @@ namespace FC2026.Gameplay
             {
                 mobileMove = Vector2.zero;
                 mobileSprint = false;
+                mobilePassHeld = false;
                 mobileSecondManPressHeld = false;
                 mobileShieldHeld = false;
                 mobileShotHeld = false;
             }
+
+            var passHeld = mobilePassHeld || Input.GetKey(KeyCode.E) || Input.GetKey(KeyCode.JoystickButton2);
+            if (passHeld)
+            {
+                passHoldTime = Mathf.Min(LoftPassHoldDuration, passHoldTime + Time.deltaTime);
+            }
+            else if (passInputHeld)
+            {
+                if (passHoldTime >= LoftPassHoldDuration * 0.85f)
+                    QueueLoftedPass();
+                else
+                    QueuePass();
+                passHoldTime = 0f;
+            }
+            passInputHeld = passHeld;
 
             UpdateSecondaryPress();
             var shotHeld = mobileShotHeld || Input.GetKey(KeyCode.Space) || Input.GetKey(KeyCode.JoystickButton0);
@@ -194,8 +216,8 @@ namespace FC2026.Gameplay
             }
             shotChargeInputHeld = shotHeld;
 
-            if (Input.GetKeyDown(KeyCode.E) || Input.GetKeyDown(KeyCode.JoystickButton2))
-                passQueued = true;
+            if (Input.GetKeyDown(KeyCode.R))
+                QueueLoftedPass();
             if (Input.GetKeyDown(KeyCode.Q))
                 throughBallQueued = true;
             if (Input.GetKeyDown(KeyCode.B))
@@ -272,7 +294,9 @@ namespace FC2026.Gameplay
             if (passQueued)
             {
                 passQueued = false;
-                AttemptPass(false);
+                var lofted = loftedPassQueued;
+                loftedPassQueued = false;
+                AttemptPass(false, lofted);
             }
 
             if (throughBallQueued)
@@ -353,6 +377,7 @@ namespace FC2026.Gameplay
         }
 
         public void SetMobileShotHeld(bool held) => mobileShotHeld = held;
+        public void SetMobilePassHeld(bool held) => mobilePassHeld = held;
         public void SetMobileSecondManPressHeld(bool held) => mobileSecondManPressHeld = held;
         public void SetMobileShieldHeld(bool held) => mobileShieldHeld = held;
 
@@ -382,7 +407,8 @@ namespace FC2026.Gameplay
             }
         }
 
-        public void QueuePass() => passQueued = true;
+        public void QueuePass() { loftedPassQueued = false; passQueued = true; }
+        public void QueueLoftedPass() { loftedPassQueued = true; passQueued = true; }
         public void QueueThroughBall() => throughBallQueued = true;
         public void QueueShot() { queuedShotPower01 = 0f; lowDrivenShotQueued = false; shootQueued = true; }
         public void QueueChipShot() { queuedShotPower01 = 0f; lowDrivenShotQueued = false; chipShotQueued = true; shootQueued = true; }
@@ -400,6 +426,10 @@ namespace FC2026.Gameplay
         public void ClearQueuedActions()
         {
             passQueued = false;
+            loftedPassQueued = false;
+            passInputHeld = false;
+            mobilePassHeld = false;
+            passHoldTime = 0f;
             throughBallQueued = false;
             shootQueued = false;
             chipShotQueued = false;
@@ -633,13 +663,13 @@ namespace FC2026.Gameplay
             return Mathf.Clamp(side * 2.6f + aimInput * 0.85f, -3.3f, 3.3f);
         }
 
-        public bool AttemptPass(bool throughBall)
+        public bool AttemptPass(bool throughBall, bool lofted = false)
         {
             var ball = BallController.Instance;
             if (!CanPlayBall(ball) || kickLock > 0f)
                 return false;
 
-            var target = FindPassTarget(throughBall);
+            var target = FindPassTarget(throughBall, lofted);
             if (target == null)
                 return false;
 
@@ -649,6 +679,8 @@ namespace FC2026.Gameplay
             var speed = Mathf.Clamp(7f + flatDistance * 0.95f, 8.5f, 22f) * Mathf.Lerp(0.9f, 1.05f, passingStat);
             if (throughBall)
                 speed *= 1.12f;
+            else if (lofted)
+                speed *= 1.16f;
 
             var aimPoint = target.transform.position;
             if (throughBall)
@@ -667,19 +699,22 @@ namespace FC2026.Gameplay
             var pressureDistance = NearestOpponentDistance(transform.position);
             // Nearby defenders add a small directional error while passing skill still shapes the base accuracy.
             var pressureError = Mathf.Lerp(0.025f, 0f, Mathf.InverseLerp(1.25f, 5f, pressureDistance));
-            var skillError = (1f - passingStat) * (throughBall ? 0.045f : 0.03f);
+            var skillError = (1f - passingStat) *
+                             (throughBall ? 0.045f : lofted ? 0.04f : 0.03f);
             // Fatigue affects touch and execution, with passing skill softening the accuracy loss.
             var fatigueError = (1f - stamina) * Mathf.Lerp(0.025f, 0.012f, passingStat);
             var passError = (skillError + pressureError + fatigueError) * footErrorFactor;
             flat = (flat + transform.right * Random.Range(-passError, passError)).normalized;
 
             motion?.TriggerPass(useLeftFoot);
-            ball.Kick(flat, speed, throughBall ? 0.17f : 0.025f, transform, throughBall ? 1.5f : 0f);
+            var lift = throughBall ? 0.17f : lofted ? 0.25f : 0.025f;
+            var curve = throughBall ? 1.5f : lofted ? 0.45f : 0f;
+            ball.Kick(flat, speed, lift, transform, curve);
             kickLock = 0.26f;
             return true;
         }
 
-        private FootballPlayerController FindPassTarget(bool throughBall)
+        private FootballPlayerController FindPassTarget(bool throughBall, bool lofted)
         {
             var ball = BallController.Instance;
             var origin = ball != null ? ball.Position : transform.position;
@@ -689,7 +724,7 @@ namespace FC2026.Gameplay
 
             FootballPlayerController best = null;
             var bestScore = float.MinValue;
-            var maxRange = throughBall ? 32f : 26f;
+            var maxRange = throughBall ? 32f : lofted ? 32f : 26f;
 
             foreach (var candidate in Registry)
             {
@@ -714,8 +749,10 @@ namespace FC2026.Gameplay
 
                 var openness = NearestOpponentDistance(candidate.transform.position);
                 var laneRisk = LaneRisk(origin, candidate.transform.position);
-                // Better passers accept more risk when a forward lane is available.
-                var laneRiskPenalty = Mathf.Lerp(9f, 5f, passingStat);
+                // Lofted passes can clear a tight ground lane, but close marking still lowers the target's score.
+                var laneRiskPenalty = lofted
+                    ? Mathf.Lerp(4.5f, 2.5f, passingStat)
+                    : Mathf.Lerp(9f, 5f, passingStat);
                 var score = forwardAmount * 9f + Mathf.Clamp(openness, 0f, 12f) * 0.85f
                             - Mathf.Abs(offset.x) * 0.07f - distance * 0.08f - laneRisk * laneRiskPenalty;
 

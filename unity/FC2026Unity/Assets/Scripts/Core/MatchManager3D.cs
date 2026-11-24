@@ -1431,7 +1431,7 @@ namespace FC2026.Core
                 var safeBottom = Screen.height - desktopSafeArea.yMin;
                 GUI.Label(new Rect(desktopSafeArea.xMin + 18f, safeBottom - 48f,
                     Mathf.Max(0f, desktopSafeArea.width - 36f), 36f),
-                    "WASD / arrows: move   •   Shift: sprint   •   Space: shoot   •   E: pass   •   Q: through ball   •   X: tackle   •   C: call pressure   •   V: shield   •   B: low shot   •   Tab: switch   •   P / Esc: pause",
+                    "WASD / arrows: move   •   Shift: sprint   •   Space: shoot   •   E: pass/hold lob   •   R: lob   •   Q: through ball   •   X: tackle   •   C: call pressure   •   V: shield   •   B: low shot   •   Tab: switch   •   P / Esc: pause",
                     helpStyle);
             }
 
@@ -1832,8 +1832,11 @@ namespace FC2026.Core
                 userPlayer.ShotCharge01 > 0.04f ? $"SHOOT {Mathf.RoundToInt(userPlayer.ShotCharge01 * 100f)}%" : "SHOOT",
                 actionPrimaryStyle);
             userPlayer.SetMobileShotHeld(shotHeld);
-            if (GUI.Button(ActionRect(1, 0), "PASS", actionSecondaryStyle))
-                userPlayer.QueuePass();
+            var passHeld = GUI.RepeatButton(
+                ActionRect(1, 0),
+                userPlayer.PassHold01 > 0.03f ? $"LOB {Mathf.RoundToInt(userPlayer.PassHold01 * 100f)}%" : "PASS/LOB",
+                actionSecondaryStyle);
+            userPlayer.SetMobilePassHeld(passHeld);
             if (GUI.Button(ActionRect(0, 1), "TACKLE", actionSecondaryStyle))
                 userPlayer.QueueTackle();
 
