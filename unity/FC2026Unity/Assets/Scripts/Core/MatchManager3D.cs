@@ -1842,17 +1842,67 @@ namespace FC2026.Core
 
         private void UpdateCommentary()
         {
-            string[] lines =
+            var lines = new List<string>();
+            var minute = CurrentMinute();
+            var owner = ball != null ? ball.Owner : null;
+
+            if (owner == null)
             {
-                "Good pressure from the defence; there is no room to turn.",
-                "The midfield battle is heating up as both teams look for a gap.",
-                "A chance is building here — the runners are moving into space.",
-                "The crowd is urging the players forward.",
-                "A strong challenge wins the ball back in midfield.",
-                "The passing needs to be quicker if they are to break through.",
-                "Both teams are working hard to keep their shape."
-            };
-            commentary = lines[Random.Range(0, lines.Length)];
+                lines.Add(ball != null && ball.Speed > 9f
+                    ? "The ball breaks loose and both sides race to the second ball."
+                    : "Both teams close in as possession hangs in the balance.");
+            }
+            else if (owner.IsGoalkeeper)
+            {
+                var team = owner.TeamId == 1 ? homeTeamName : awayTeamName;
+                lines.Add($"{team}'s goalkeeper settles the ball and looks upfield.");
+                lines.Add($"{team} can reset their shape from the back.");
+            }
+            else
+            {
+                var team = owner.TeamId == 1 ? homeTeamName : awayTeamName;
+                var progress = Mathf.Clamp01(
+                    owner.transform.position.z * owner.TeamDirection / (PitchLength * 0.5f));
+                var nearestOpponent = float.PositiveInfinity;
+
+                foreach (var candidate in FootballPlayerController.All)
+                {
+                    if (candidate == null || candidate.TeamId == owner.TeamId)
+                        continue;
+
+                    var separation = candidate.transform.position - owner.transform.position;
+                    separation.y = 0f;
+                    nearestOpponent = Mathf.Min(nearestOpponent, separation.magnitude);
+                }
+
+                var trailing = owner.TeamId == 1 ? homeScore < awayScore : awayScore < homeScore;
+                if (minute >= 75 && trailing)
+                    lines.Add($"{team} push forward in search of an equaliser.");
+                if (progress >= 0.68f)
+                    lines.Add($"{team} work the ball into the attacking third.");
+                if (nearestOpponent < 3.2f)
+                    lines.Add("The nearest defender closes quickly; the ball carrier has little time.");
+                else if (progress < 0.32f)
+                    lines.Add($"{team} build patiently from the back.");
+
+                var totalPossession = homePossession + awayPossession;
+                if (totalPossession > 12f)
+                {
+                    var homeShare = homePossession / totalPossession;
+                    if (homeShare > 0.62f)
+                        lines.Add($"{homeTeamName} have controlled much of the possession so far.");
+                    else if (homeShare < 0.38f)
+                        lines.Add($"{awayTeamName} have controlled much of the possession so far.");
+                }
+
+                if (lines.Count == 0)
+                    lines.Add($"{team} keep the ball moving through midfield.");
+            }
+
+            if (minute >= 85 && homeScore == awayScore)
+                lines.Add("The match is finely balanced as the final minutes tick away.");
+
+            commentary = lines[Random.Range(0, lines.Count)];
         }
 
         private void CompleteCareerMatch(bool saveResult = true)
