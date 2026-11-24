@@ -31,6 +31,7 @@ namespace FC2026.Gameplay
         private bool shootQueued;
         private bool chipShotQueued;
         private bool finesseShotQueued;
+        private bool lowDrivenShotQueued;
         private bool tackleQueued;
         private bool mobileSecondManPressHeld;
         private bool mobileShieldHeld;
@@ -197,6 +198,8 @@ namespace FC2026.Gameplay
                 passQueued = true;
             if (Input.GetKeyDown(KeyCode.Q))
                 throughBallQueued = true;
+            if (Input.GetKeyDown(KeyCode.B))
+                QueueLowDrivenShot();
             if (Input.GetKeyDown(KeyCode.X) || Input.GetKeyDown(KeyCode.JoystickButton1))
                 tackleQueued = true;
             if (Input.GetKeyDown(KeyCode.Tab))
@@ -281,10 +284,11 @@ namespace FC2026.Gameplay
             if (shootQueued)
             {
                 shootQueued = false;
-                AttemptShot(chipShotQueued, finesseShotQueued, null, queuedShotPower01);
+                AttemptShot(chipShotQueued, finesseShotQueued, null, queuedShotPower01, lowDrivenShotQueued);
                 queuedShotPower01 = 0f;
                 chipShotQueued = false;
                 finesseShotQueued = false;
+                lowDrivenShotQueued = false;
             }
 
             TryClaimLooseBall();
@@ -380,9 +384,17 @@ namespace FC2026.Gameplay
 
         public void QueuePass() => passQueued = true;
         public void QueueThroughBall() => throughBallQueued = true;
-        public void QueueShot() { queuedShotPower01 = 0f; shootQueued = true; }
-        public void QueueChipShot() { queuedShotPower01 = 0f; chipShotQueued = true; shootQueued = true; }
-        public void QueueFinesseShot() { queuedShotPower01 = 0f; finesseShotQueued = true; shootQueued = true; }
+        public void QueueShot() { queuedShotPower01 = 0f; lowDrivenShotQueued = false; shootQueued = true; }
+        public void QueueChipShot() { queuedShotPower01 = 0f; lowDrivenShotQueued = false; chipShotQueued = true; shootQueued = true; }
+        public void QueueFinesseShot() { queuedShotPower01 = 0f; lowDrivenShotQueued = false; finesseShotQueued = true; shootQueued = true; }
+        public void QueueLowDrivenShot()
+        {
+            queuedShotPower01 = 0f;
+            chipShotQueued = false;
+            finesseShotQueued = false;
+            lowDrivenShotQueued = true;
+            shootQueued = true;
+        }
         public void QueueTackle() => tackleQueued = true;
 
         public void ClearQueuedActions()
@@ -392,6 +404,7 @@ namespace FC2026.Gameplay
             shootQueued = false;
             chipShotQueued = false;
             finesseShotQueued = false;
+            lowDrivenShotQueued = false;
             tackleQueued = false;
             mobileShotHeld = false;
             mobileSecondManPressHeld = false;
@@ -522,7 +535,7 @@ namespace FC2026.Gameplay
 
         public float SelectShotTargetX() => ChooseShotTargetX();
 
-        public bool AttemptShot(bool chip = false, bool finesse = false, float? targetXOverride = null, float powerCharge01 = 0f)
+        public bool AttemptShot(bool chip = false, bool finesse = false, float? targetXOverride = null, float powerCharge01 = 0f, bool lowDriven = false)
         {
             var ball = BallController.Instance;
             if (!CanPlayBall(ball) || kickLock > 0f)
@@ -561,8 +574,11 @@ namespace FC2026.Gameplay
             if (chip) power *= 0.72f;
             else if (finesse) power *= 0.95f;
 
-            var lift = chip ? 0.5f : finesse ? 0.11f : Mathf.Clamp(0.085f + distance * 0.0014f, 0.085f, 0.155f);
-            var curve = finesse ? Mathf.Sign(targetX - ball.Position.x) * (3.5f + shootingStat * 5.5f) : 0f;
+            var lift = lowDriven ? 0.02f : chip ? 0.5f : finesse ? 0.11f :
+                Mathf.Clamp(0.085f + distance * 0.0014f, 0.085f, 0.155f);
+            var curve = finesse && !lowDriven
+                ? Mathf.Sign(targetX - ball.Position.x) * (3.5f + shootingStat * 5.5f)
+                : 0f;
 
             motion?.TriggerShot(useLeftFoot);
             ball.Kick(flat, power, lift, transform, curve);

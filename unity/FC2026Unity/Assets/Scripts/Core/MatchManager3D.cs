@@ -1431,7 +1431,7 @@ namespace FC2026.Core
                 var safeBottom = Screen.height - desktopSafeArea.yMin;
                 GUI.Label(new Rect(desktopSafeArea.xMin + 18f, safeBottom - 48f,
                     Mathf.Max(0f, desktopSafeArea.width - 36f), 36f),
-                    "WASD / arrows: move   •   Shift: sprint   •   Space: shoot   •   E: pass   •   Q: through ball   •   X: tackle   •   C: call pressure   •   V: shield   •   Tab: switch   •   P / Esc: pause",
+                    "WASD / arrows: move   •   Shift: sprint   •   Space: shoot   •   E: pass   •   Q: through ball   •   X: tackle   •   C: call pressure   •   V: shield   •   B: low shot   •   Tab: switch   •   P / Esc: pause",
                     helpStyle);
             }
 
@@ -1863,6 +1863,8 @@ namespace FC2026.Core
             {
                 var shieldHeld = GUI.RepeatButton(ActionRect(0, 4), "SHIELD", actionSecondaryStyle);
                 userPlayer.SetMobileShieldHeld(shieldHeld);
+                if (GUI.Button(ActionRect(1, 4), "LOW", actionSecondaryStyle))
+                    userPlayer.QueueLowDrivenShot();
             }
             else
             {
