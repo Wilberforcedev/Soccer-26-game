@@ -32,6 +32,7 @@ namespace FC2026.Gameplay
         private bool chipShotQueued;
         private bool finesseShotQueued;
         private bool tackleQueued;
+        private bool mobileSecondManPressHeld;
         private bool mobileShotHeld;
         private bool shotChargeInputHeld;
         private float shotChargeTime;
@@ -68,6 +69,7 @@ namespace FC2026.Gameplay
         public Vector3 LastMoveDirection => lastMoveDirection;
         public Rigidbody Body => body;
         public static FootballPlayerController ActiveUserPlayer { get; private set; }
+        public static FootballPlayerController SecondaryPressPlayer { get; private set; }
 
         public static IReadOnlyList<FootballPlayerController> All => Registry;
 
@@ -149,6 +151,8 @@ namespace FC2026.Gameplay
             Registry.Remove(this);
             if (ActiveUserPlayer == this)
                 ActiveUserPlayer = null;
+            if (SecondaryPressPlayer == this)
+                SecondaryPressPlayer = null;
         }
 
         private void Start()
@@ -167,9 +171,11 @@ namespace FC2026.Gameplay
             {
                 mobileMove = Vector2.zero;
                 mobileSprint = false;
+                mobileSecondManPressHeld = false;
                 mobileShotHeld = false;
             }
 
+            UpdateSecondaryPress();
             var shotHeld = mobileShotHeld || Input.GetKey(KeyCode.Space) || Input.GetKey(KeyCode.JoystickButton0);
             if (shotHeld)
             {
@@ -336,6 +342,33 @@ namespace FC2026.Gameplay
         }
 
         public void SetMobileShotHeld(bool held) => mobileShotHeld = held;
+        public void SetMobileSecondManPressHeld(bool held) => mobileSecondManPressHeld = held;
+
+        private void UpdateSecondaryPress()
+        {
+            SecondaryPressPlayer = null;
+            var ball = BallController.Instance;
+            var pressHeld = mobileSecondManPressHeld || Input.GetKey(KeyCode.C);
+            if (!pressHeld || ball == null || ball.Owner == null || ball.Owner.TeamId == TeamId)
+                return;
+
+            var ballCarrier = ball.Owner;
+            var bestDistance = 28f * 28f;
+            foreach (var candidate in Registry)
+            {
+                if (candidate == null || candidate == this || candidate.IsUserControlled ||
+                    candidate.IsGoalkeeper || candidate.TeamId != TeamId)
+                    continue;
+
+                var separation = candidate.transform.position - ballCarrier.transform.position;
+                separation.y = 0f;
+                if (separation.sqrMagnitude >= bestDistance)
+                    continue;
+
+                bestDistance = separation.sqrMagnitude;
+                SecondaryPressPlayer = candidate;
+            }
+        }
 
         public void QueuePass() => passQueued = true;
         public void QueueThroughBall() => throughBallQueued = true;
@@ -353,6 +386,8 @@ namespace FC2026.Gameplay
             finesseShotQueued = false;
             tackleQueued = false;
             mobileShotHeld = false;
+            mobileSecondManPressHeld = false;
+            SecondaryPressPlayer = null;
             shotChargeInputHeld = false;
             shotChargeTime = 0f;
             queuedShotPower01 = 0f;

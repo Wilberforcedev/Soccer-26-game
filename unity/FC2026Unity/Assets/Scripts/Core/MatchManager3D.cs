@@ -1431,7 +1431,7 @@ namespace FC2026.Core
                 var safeBottom = Screen.height - desktopSafeArea.yMin;
                 GUI.Label(new Rect(desktopSafeArea.xMin + 18f, safeBottom - 48f,
                     Mathf.Max(0f, desktopSafeArea.width - 36f), 36f),
-                    "WASD / arrows: move   •   Shift: sprint   •   Space: shoot   •   E: pass   •   Q: through ball   •   X: tackle   •   Tab: switch   •   P / Esc: pause",
+                    "WASD / arrows: move   •   Shift: sprint   •   Space: shoot   •   E: pass   •   Q: through ball   •   X: tackle   •   C: call pressure   •   Tab: switch   •   P / Esc: pause",
                     helpStyle);
             }
 
@@ -1836,8 +1836,21 @@ namespace FC2026.Core
                 userPlayer.QueuePass();
             if (GUI.Button(ActionRect(0, 1), "TACKLE", actionSecondaryStyle))
                 userPlayer.QueueTackle();
-            if (GUI.Button(ActionRect(1, 1), "THROUGH", actionSecondaryStyle))
-                userPlayer.QueueThroughBall();
+
+            var defending = BallController.Instance != null &&
+                            BallController.Instance.Owner != null &&
+                            BallController.Instance.Owner.TeamId != userPlayer.TeamId;
+            if (defending)
+            {
+                var pressHeld = GUI.RepeatButton(ActionRect(1, 1), "PRESS", actionSecondaryStyle);
+                userPlayer.SetMobileSecondManPressHeld(pressHeld);
+            }
+            else
+            {
+                userPlayer.SetMobileSecondManPressHeld(false);
+                if (GUI.Button(ActionRect(1, 1), "THROUGH", actionSecondaryStyle))
+                    userPlayer.QueueThroughBall();
+            }
             var sprint = GUI.RepeatButton(ActionRect(0, 2), "SPRINT", actionSecondaryStyle);
             if (GUI.Button(ActionRect(1, 2), "SWITCH", actionSecondaryStyle))
                 userPlayer.SwitchToNearestTeammate();

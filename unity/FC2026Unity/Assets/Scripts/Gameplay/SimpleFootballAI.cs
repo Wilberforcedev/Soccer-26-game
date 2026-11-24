@@ -111,6 +111,13 @@ namespace FC2026.Gameplay
                 return;
             }
 
+            if (owner != null && owner.TeamDirection != attackDirection &&
+                FootballPlayerController.SecondaryPressPlayer == controller)
+            {
+                PressBall(owner, ballFlat, distToBall);
+                return;
+            }
+
             if (IsClosestToBall(ballFlat))
             {
                 if (owner == null)
@@ -433,6 +440,10 @@ namespace FC2026.Gameplay
 
         private bool IsClosestToBall(Vector3 ballFlat)
         {
+            var pressPlayer = FootballPlayerController.SecondaryPressPlayer;
+            if (pressPlayer != null && pressPlayer != controller)
+                return false;
+
             var myDistance = (Flat(transform.position) - ballFlat).sqrMagnitude;
             foreach (var mate in FootballPlayerController.All)
             {
