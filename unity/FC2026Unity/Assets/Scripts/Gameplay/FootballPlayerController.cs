@@ -710,6 +710,7 @@ namespace FC2026.Gameplay
             var lift = throughBall ? 0.17f : lofted ? 0.25f : 0.025f;
             var curve = throughBall ? 1.5f : lofted ? 0.45f : 0f;
             ball.Kick(flat, speed, lift, transform, curve);
+            MatchManager3D.Instance?.RegisterPassForOffside(this);
             kickLock = 0.26f;
             return true;
         }

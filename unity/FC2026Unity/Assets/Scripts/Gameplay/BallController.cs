@@ -1,4 +1,5 @@
 using UnityEngine;
+using FC2026.Core;
 
 namespace FC2026.Gameplay
 {
@@ -65,6 +66,10 @@ namespace FC2026.Gameplay
         {
             var player = collision.collider.GetComponentInParent<FootballPlayerController>();
             if (player == null)
+                return;
+
+            if (MatchManager3D.Instance != null &&
+                MatchManager3D.Instance.CheckOffsideContact(player))
                 return;
 
             // Deflections count as a touch, so throw-ins and corners go to the right team.
@@ -176,10 +181,11 @@ namespace FC2026.Gameplay
 
         public void Claim(FootballPlayerController player)
         {
-            if (!CanBeControlledBy(player))
+            if (!CanBeControlledBy(player) || owner == player)
                 return;
 
-            if (owner == player)
+            if (MatchManager3D.Instance != null &&
+                (!MatchManager3D.IsLive || MatchManager3D.Instance.CheckOffsideContact(player)))
                 return;
 
             if (owner != null)

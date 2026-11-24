@@ -15,6 +15,9 @@ namespace FC2026.Core
         private const float GoalHeight = 2.44f;
 
         private readonly List<(Transform transform, Vector3 start)> playerStarts = new();
+        private readonly HashSet<FootballPlayerController> offsideCandidates = new();
+        private int offsideTeamDirection;
+        private int offsideExemptionDirection;
 
         private const float HalfDurationSeconds = 90f;
 
@@ -315,6 +318,81 @@ namespace FC2026.Core
             else awayTacklesWon++;
         }
 
+        public void RegisterPassForOffside(FootballPlayerController passer)
+        {
+            offsideCandidates.Clear();
+            offsideTeamDirection = 0;
+            if (passer == null)
+                return;
+
+            if (offsideExemptionDirection == passer.TeamDirection)
+            {
+                offsideExemptionDirection = 0;
+                return;
+            }
+
+            var attackDirection = passer.TeamDirection;
+            var lastDefender = float.NegativeInfinity;
+            var secondLastDefender = float.NegativeInfinity;
+            foreach (var candidate in FootballPlayerController.All)
+            {
+                if (candidate == null || candidate.TeamDirection == attackDirection)
+                    continue;
+
+                var goalSidePosition = candidate.transform.position.z * attackDirection;
+                if (goalSidePosition > lastDefender)
+                {
+                    secondLastDefender = lastDefender;
+                    lastDefender = goalSidePosition;
+                }
+                else if (goalSidePosition > secondLastDefender)
+                {
+                    secondLastDefender = goalSidePosition;
+                }
+            }
+
+            if (secondLastDefender == float.NegativeInfinity)
+                return;
+
+            var ballPosition = ball != null ? ball.Position : passer.transform.position;
+            var offsideLine = Mathf.Max(ballPosition.z * attackDirection, secondLastDefender);
+            foreach (var candidate in FootballPlayerController.All)
+            {
+                if (candidate == null || candidate == passer || candidate.TeamDirection != attackDirection)
+                    continue;
+
+                var goalSidePosition = candidate.transform.position.z * attackDirection;
+                if (goalSidePosition > 0f && goalSidePosition > offsideLine)
+                    offsideCandidates.Add(candidate);
+            }
+
+            if (offsideCandidates.Count > 0)
+                offsideTeamDirection = attackDirection;
+        }
+
+        public bool CheckOffsideContact(FootballPlayerController player)
+        {
+            if (player == null || !live || resetting)
+                return false;
+
+            var isOffside = player.TeamDirection == offsideTeamDirection &&
+                            offsideCandidates.Contains(player);
+            offsideCandidates.Clear();
+            offsideTeamDirection = 0;
+            offsideExemptionDirection = 0;
+
+            if (!isOffside)
+                return false;
+
+            var spot = new Vector3(
+                Mathf.Clamp(player.transform.position.x, -PitchWidth * 0.5f + 1f, PitchWidth * 0.5f - 1f),
+                0.14f,
+                Mathf.Clamp(player.transform.position.z, -PitchLength * 0.5f + 1f, PitchLength * 0.5f - 1f));
+            commentary = "Offside. The defending team will restart play.";
+            StartCoroutine(RestartPlay(spot, -player.TeamDirection, false, 0.9f, "OFFSIDE"));
+            return true;
+        }
+
         private void UpdateAutoSwitch()
         {
             if (userPlayer == null || ball == null)
@@ -439,6 +517,9 @@ namespace FC2026.Core
 
         private IEnumerator BeginKickoff(int kickoffTeamDirection, float delay)
         {
+            offsideCandidates.Clear();
+            offsideTeamDirection = 0;
+            offsideExemptionDirection = 0;
             live = false;
             resetting = true;
 
@@ -523,6 +604,11 @@ namespace FC2026.Core
 
         private IEnumerator RestartPlay(Vector3 spot, int awardedDirection, bool useGoalkeeper, float delay, string label)
         {
+            offsideCandidates.Clear();
+            offsideTeamDirection = 0;
+            offsideExemptionDirection = label == "THROW-IN" || label == "CORNER" || label == "GOAL KICK"
+                ? awardedDirection
+                : 0;
             resetting = true;
             live = false;
 
@@ -556,6 +642,7 @@ namespace FC2026.Core
                 "CORNER" => "A corner kick is awarded. Bodies pile into the box.",
                 "GOAL KICK" => "The goalkeeper will restart play from the back.",
                 "THROW-IN" => "A throw-in restarts the game down the touchline.",
+                "OFFSIDE" => "An offside offence is given. The other team takes an indirect free kick.",
                 _ => "Play restarts."
             };
 
@@ -1294,6 +1381,9 @@ namespace FC2026.Core
             if (resetting || matchFinished || !live)
                 return;
 
+            offsideCandidates.Clear();
+            offsideTeamDirection = 0;
+            offsideExemptionDirection = 0;
             var goalSide = homeGoal ? -1 : 1;
             var scoringTeamId = 1;
             foreach (var controller in FootballPlayerController.All)
