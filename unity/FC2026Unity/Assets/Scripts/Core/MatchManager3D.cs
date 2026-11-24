@@ -1575,9 +1575,13 @@ namespace FC2026.Core
             {
                 fullTimeStyle ??= CreatePanelStyle();
                 var confirm = confirmRestart || confirmAbandon;
+                var compactPauseLayout = Screen.height < 480f;
+                var pausePanelHeight = compactPauseLayout
+                    ? Mathf.Min(Screen.height * 0.92f, 520f)
+                    : Mathf.Min(Mathf.Max(Screen.height * 0.86f, 420f), 520f);
                 var panel = HubTheme.CenteredPanel(
                     Mathf.Min(Screen.width * 0.86f, 520f),
-                    Mathf.Min(Mathf.Max(Screen.height * 0.86f, 420f), 520f),
+                    pausePanelHeight,
                     12f);
                 GUI.Box(panel, string.Empty, panelStyle);
                 GUI.Label(new Rect(panel.x + 56f, panel.y + 12f, panel.width - 112f, 20f), "SOCCER 27",
@@ -1602,9 +1606,11 @@ namespace FC2026.Core
 
                 var buttonX = panel.x + panel.width * 0.14f;
                 var buttonWidth = panel.width * 0.72f;
-                var buttonHeight = Mathf.Clamp((panel.height - 220f) / 5f, 30f, 42f);
                 const float buttonGap = 5f;
-                var buttonY = panel.y + 198f;
+                var buttonHeight = compactPauseLayout
+                    ? Mathf.Clamp((panel.height - 210f) / 3f, 30f, 42f)
+                    : Mathf.Clamp((panel.height - 220f) / 5f, 30f, 42f);
+                var buttonY = panel.y + (compactPauseLayout ? 190f : 198f);
 
                 if (confirm)
                 {
@@ -1626,6 +1632,44 @@ namespace FC2026.Core
                         confirmRestart = false;
                         confirmAbandon = false;
                     }
+                }
+                else if (compactPauseLayout)
+                {
+                    var halfButtonWidth = (buttonWidth - buttonGap) * 0.5f;
+                    if (GUI.Button(new Rect(buttonX, buttonY, buttonWidth, buttonHeight),
+                        "RESUME MATCH", flowButtonStyle))
+                        ResumeMatch();
+                    buttonY += buttonHeight + buttonGap;
+
+                    var nextTactic = (MatchTacticPreset)(((int)selectedTactic + 1) % 3);
+                    var tacticName = selectedTactic switch
+                    {
+                        MatchTacticPreset.Balanced => "BALANCED",
+                        MatchTacticPreset.HighPress => "HIGH PRESS",
+                        _ => "COUNTER ATTACK"
+                    };
+                    if (GUI.Button(new Rect(buttonX, buttonY, halfButtonWidth, buttonHeight),
+                        $"TACTIC: {tacticName}", buttonStyle))
+                        ApplyHomeTactic(nextTactic);
+
+                    var nextDifficulty = (MatchDifficultyPreset)(((int)selectedDifficulty + 1) % 3);
+                    var difficultyName = selectedDifficulty switch
+                    {
+                        MatchDifficultyPreset.Easy => "EASY",
+                        MatchDifficultyPreset.Standard => "STANDARD",
+                        _ => "HARD"
+                    };
+                    if (GUI.Button(new Rect(buttonX + halfButtonWidth + buttonGap, buttonY,
+                        halfButtonWidth, buttonHeight), $"CPU: {difficultyName}", buttonStyle))
+                        ApplyCpuDifficulty(nextDifficulty);
+                    buttonY += buttonHeight + buttonGap;
+
+                    if (GUI.Button(new Rect(buttonX, buttonY, halfButtonWidth, buttonHeight),
+                        "RESTART", buttonStyle))
+                        confirmRestart = true;
+                    if (GUI.Button(new Rect(buttonX + halfButtonWidth + buttonGap, buttonY,
+                        halfButtonWidth, buttonHeight), "RETURN TO CAREER", buttonStyle))
+                        confirmAbandon = true;
                 }
                 else
                 {
