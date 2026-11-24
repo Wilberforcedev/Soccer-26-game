@@ -33,6 +33,7 @@ namespace FC2026.Gameplay
         private bool finesseShotQueued;
         private bool tackleQueued;
         private bool mobileSecondManPressHeld;
+        private bool mobileShieldHeld;
         private bool mobileShotHeld;
         private bool shotChargeInputHeld;
         private float shotChargeTime;
@@ -64,6 +65,8 @@ namespace FC2026.Gameplay
         public float DefendingStat => defendingStat;
         public float PhysicalStat => physicalStat;
         public float ShotCharge01 => Mathf.Clamp01(shotChargeTime / ShotChargeDuration);
+        public bool IsShielding => IsUserControlled && HasBall &&
+                                   (mobileShieldHeld || Input.GetKey(KeyCode.V));
         public bool IsGoalkeeper => Role == PlayerRole.Goalkeeper;
         public bool HasBall => BallController.Instance != null && BallController.Instance.IsOwnedBy(this);
         public Vector3 LastMoveDirection => lastMoveDirection;
@@ -172,6 +175,7 @@ namespace FC2026.Gameplay
                 mobileMove = Vector2.zero;
                 mobileSprint = false;
                 mobileSecondManPressHeld = false;
+                mobileShieldHeld = false;
                 mobileShotHeld = false;
             }
 
@@ -226,11 +230,14 @@ namespace FC2026.Gameplay
             }
 
             var move = ReadMove();
-            var sprinting = ReadSprint() && move.sqrMagnitude > 0.02f && stamina > 0.04f;
+            var shielding = IsShielding;
+            var sprinting = ReadSprint() && move.sqrMagnitude > 0.02f && stamina > 0.04f && !shielding;
             var carryFactor = HasBall ? 0.93f : 1f;
             var fatigueFactor = Mathf.Lerp(0.74f, 1f, stamina);
+            var shieldingFactor = shielding ? 0.68f : 1f;
             // The selected player's pace rating scales their movement and sprint speed.
-            var desiredSpeed = (sprinting ? sprintSpeed : moveSpeed) * paceMultiplier * fatigueFactor * carryFactor;
+            var desiredSpeed = (sprinting ? sprintSpeed : moveSpeed) * paceMultiplier *
+                               fatigueFactor * carryFactor * shieldingFactor;
             var desired = new Vector3(move.x, 0f, move.y);
             if (desired.sqrMagnitude > 1f)
                 desired.Normalize();
@@ -343,6 +350,7 @@ namespace FC2026.Gameplay
 
         public void SetMobileShotHeld(bool held) => mobileShotHeld = held;
         public void SetMobileSecondManPressHeld(bool held) => mobileSecondManPressHeld = held;
+        public void SetMobileShieldHeld(bool held) => mobileShieldHeld = held;
 
         private void UpdateSecondaryPress()
         {
@@ -387,6 +395,7 @@ namespace FC2026.Gameplay
             tackleQueued = false;
             mobileShotHeld = false;
             mobileSecondManPressHeld = false;
+            mobileShieldHeld = false;
             SecondaryPressPlayer = null;
             shotChargeInputHeld = false;
             shotChargeTime = 0f;
@@ -491,8 +500,10 @@ namespace FC2026.Gameplay
             var skillBonus = (defendingStat - 0.6f) * 0.24f;
             // Stronger carriers resist contact; facing the ball improves the tackler's approach.
             var carrierResistance = (ball.Owner.PhysicalStat - 0.5f) * 0.18f;
+            var shieldResistance = ball.Owner.IsShielding ? 0.16f : 0f;
             var chance = Mathf.Clamp(
-                Mathf.Lerp(0.36f, 0.78f, stamina) + defenderBonus + skillBonus + approachBonus - carrierResistance,
+                Mathf.Lerp(0.36f, 0.78f, stamina) + defenderBonus + skillBonus + approachBonus -
+                carrierResistance - shieldResistance,
                 0f, 0.9f);
             if (Random.value > chance)
                 return false;

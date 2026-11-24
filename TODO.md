@@ -14,6 +14,7 @@
 - [x] Add halftime team tactics: balanced, high press, and counter attack.
 - [x] Allow tactical presets to be changed from the pause menu and keyboard during live play.
 - [x] Add a held call-for-pressure control that sends one AI teammate to close down the opposing ball carrier.
+- [x] Add on-ball shielding with slower movement and stronger resistance to tackles while held.
 - [x] Add contextual movement animation for turns and ball-carrying, with sprinting, passing, and shooting actions.
 
 ## Mobile quality
