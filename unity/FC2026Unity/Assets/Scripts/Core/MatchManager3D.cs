@@ -1608,7 +1608,7 @@ namespace FC2026.Core
                 var buttonWidth = panel.width * 0.72f;
                 const float buttonGap = 5f;
                 var buttonHeight = compactPauseLayout
-                    ? Mathf.Clamp((panel.height - 210f) / 3f, 30f, 42f)
+                    ? Mathf.Clamp((panel.height - 200f) / 3f, 22f, 42f)
                     : Mathf.Clamp((panel.height - 220f) / 5f, 30f, 42f);
                 var buttonY = panel.y + (compactPauseLayout ? 190f : 198f);
 
