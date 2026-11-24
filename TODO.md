@@ -13,6 +13,7 @@
 - [x] Improve goalkeeper positioning and shot-reaction decisions with goal-side alignment and predicted shot-plane interception.
 - [x] Add halftime team tactics: balanced, high press, and counter attack.
 - [x] Allow tactical presets to be changed from the pause menu and keyboard during live play.
+- [x] Add pause-menu and keyboard CPU difficulty presets that tune opponent speed and on-ball decisions.
 - [x] Add a held call-for-pressure control that sends one AI teammate to close down the opposing ball carrier.
 - [x] Add on-ball shielding with slower movement and stronger resistance to tackles while held.
 - [x] Add low-driven shots for close-range and one-on-one finishing.

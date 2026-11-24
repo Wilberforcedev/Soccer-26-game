@@ -10,6 +10,13 @@ namespace FC2026.Gameplay
         CounterAttack
     }
 
+    public enum MatchDifficultyPreset
+    {
+        Easy,
+        Standard,
+        Hard
+    }
+
     [RequireComponent(typeof(FootballPlayerController))]
     public sealed class SimpleFootballAI : MonoBehaviour
     {
@@ -25,6 +32,8 @@ namespace FC2026.Gameplay
         private PlayerRole role = PlayerRole.Midfielder;
         private bool goalkeeper;
         private float configuredSpeedMultiplier = 1f;
+        private float difficultySpeedMultiplier = 1f;
+        private float difficultyDecisionBonus;
         private float decisionOffset;
         private float actionTimer;
         private float tackleTimer;
@@ -34,6 +43,25 @@ namespace FC2026.Gameplay
         public int TeamDirection => attackDirection;
 
         public void SetTacticPreset(MatchTacticPreset preset) => tacticPreset = preset;
+
+        public void SetDifficultyPreset(MatchDifficultyPreset preset)
+        {
+            switch (preset)
+            {
+                case MatchDifficultyPreset.Easy:
+                    difficultySpeedMultiplier = 0.88f;
+                    difficultyDecisionBonus = -0.12f;
+                    break;
+                case MatchDifficultyPreset.Hard:
+                    difficultySpeedMultiplier = 1.08f;
+                    difficultyDecisionBonus = 0.08f;
+                    break;
+                default:
+                    difficultySpeedMultiplier = 1f;
+                    difficultyDecisionBonus = 0f;
+                    break;
+            }
+        }
 
         public void FlipSides()
         {
@@ -168,8 +196,10 @@ namespace FC2026.Gameplay
                                     HasClearShootingLane(ballFlat, shotTarget);
             var closeRange = distanceToGoal < 18f;
             var longRangeOpportunity = distanceToGoal < 27f && opponentDistance > 5.5f;
-            var shotChance = Mathf.Lerp(0.28f, 0.72f, controller.ShootingStat);
-            var passPreference = Mathf.Lerp(0.62f, 0.82f, controller.PassingStat);
+            var shotChance = Mathf.Clamp01(
+                Mathf.Lerp(0.28f, 0.72f, controller.ShootingStat) + difficultyDecisionBonus);
+            var passPreference = Mathf.Clamp01(
+                Mathf.Lerp(0.62f, 0.82f, controller.PassingStat) + difficultyDecisionBonus);
 
             // When a defender is close, prefer releasing the ball instead of
             // taking a rushed shot. Passing skill influences that choice.
@@ -191,7 +221,9 @@ namespace FC2026.Gameplay
             }
 
             var shouldPass = pressured || distanceToGoal > 34f ||
-                             Random.value < Mathf.Lerp(0.22f, 0.42f, controller.PassingStat);
+                             Random.value < Mathf.Clamp01(
+                                 Mathf.Lerp(0.22f, 0.42f, controller.PassingStat) +
+                                 difficultyDecisionBonus * 0.5f);
             if (shouldPass)
             {
                 actionTimer = Random.Range(0.4f, 0.75f);
@@ -547,7 +579,8 @@ namespace FC2026.Gameplay
                     tacticalMultiplier = 1.12f;
             }
 
-            speed *= configuredSpeedMultiplier * Mathf.Lerp(0.74f, 1f, stamina) * tacticalMultiplier;
+            speed *= configuredSpeedMultiplier * difficultySpeedMultiplier *
+                     Mathf.Lerp(0.74f, 1f, stamina) * tacticalMultiplier;
 
             var self = Flat(transform.position);
             var direction = target - self;

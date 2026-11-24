@@ -83,6 +83,7 @@ namespace FC2026.Core
         private CareerNextFixture nextFixture;
         private bool cupTie;
         private MatchTacticPreset selectedTactic = MatchTacticPreset.Balanced;
+        private MatchDifficultyPreset selectedDifficulty = MatchDifficultyPreset.Standard;
         private bool cupShootoutPending;
         private CareerShootout cupShootout;
         private string matchLabel = "LEAGUE";
@@ -178,6 +179,12 @@ namespace FC2026.Core
                 ApplyHomeTactic(MatchTacticPreset.HighPress);
             else if (Input.GetKeyDown(KeyCode.Alpha3))
                 ApplyHomeTactic(MatchTacticPreset.CounterAttack);
+            else if (Input.GetKeyDown(KeyCode.Alpha4))
+                ApplyCpuDifficulty(MatchDifficultyPreset.Easy);
+            else if (Input.GetKeyDown(KeyCode.Alpha5))
+                ApplyCpuDifficulty(MatchDifficultyPreset.Standard);
+            else if (Input.GetKeyDown(KeyCode.Alpha6))
+                ApplyCpuDifficulty(MatchDifficultyPreset.Hard);
 
             if (userPlayer == null || !userPlayer.IsUserControlled)
                 FindUserPlayer();
@@ -456,6 +463,20 @@ namespace FC2026.Core
                 var ai = player.GetComponent<SimpleFootballAI>();
                 if (ai != null)
                     ai.SetTacticPreset(preset);
+            }
+        }
+
+        private void ApplyCpuDifficulty(MatchDifficultyPreset preset)
+        {
+            selectedDifficulty = preset;
+            foreach (var player in FootballPlayerController.All)
+            {
+                if (player == null || player.TeamId == 1)
+                    continue;
+
+                var ai = player.GetComponent<SimpleFootballAI>();
+                if (ai != null)
+                    ai.SetDifficultyPreset(preset);
             }
         }
 
@@ -1344,6 +1365,9 @@ namespace FC2026.Core
 
             var ai = player.AddComponent<SimpleFootballAI>();
             ai.Configure(start, attackDirection, role, role == PlayerRole.Goalkeeper ? 0.9f : profile.Pace);
+            ai.SetDifficultyPreset(player.TeamId == 1
+                ? MatchDifficultyPreset.Standard
+                : selectedDifficulty);
             ai.enabled = !user;
 
             playerStarts.Add((player.transform, start));
@@ -1553,7 +1577,7 @@ namespace FC2026.Core
                 var confirm = confirmRestart || confirmAbandon;
                 var panel = HubTheme.CenteredPanel(
                     Mathf.Min(Screen.width * 0.86f, 520f),
-                    Mathf.Min(Mathf.Max(Screen.height * 0.86f, 340f), 460f),
+                    Mathf.Min(Mathf.Max(Screen.height * 0.86f, 420f), 520f),
                     12f);
                 GUI.Box(panel, string.Empty, panelStyle);
                 GUI.Label(new Rect(panel.x + 56f, panel.y + 12f, panel.width - 112f, 20f), "SOCCER 27",
@@ -1578,7 +1602,7 @@ namespace FC2026.Core
 
                 var buttonX = panel.x + panel.width * 0.14f;
                 var buttonWidth = panel.width * 0.72f;
-                var buttonHeight = Mathf.Clamp((panel.height - 220f) / 4f, 30f, 42f);
+                var buttonHeight = Mathf.Clamp((panel.height - 220f) / 5f, 30f, 42f);
                 const float buttonGap = 5f;
                 var buttonY = panel.y + 198f;
 
@@ -1620,6 +1644,18 @@ namespace FC2026.Core
                     if (GUI.Button(new Rect(buttonX, buttonY, buttonWidth, buttonHeight),
                         $"TEAM TACTIC: {tacticName}", buttonStyle))
                         ApplyHomeTactic(nextTactic);
+                    buttonY += buttonHeight + buttonGap;
+
+                    var nextDifficulty = (MatchDifficultyPreset)(((int)selectedDifficulty + 1) % 3);
+                    var difficultyName = selectedDifficulty switch
+                    {
+                        MatchDifficultyPreset.Easy => "EASY",
+                        MatchDifficultyPreset.Standard => "STANDARD",
+                        _ => "HARD"
+                    };
+                    if (GUI.Button(new Rect(buttonX, buttonY, buttonWidth, buttonHeight),
+                        $"CPU LEVEL: {difficultyName}", buttonStyle))
+                        ApplyCpuDifficulty(nextDifficulty);
                     buttonY += buttonHeight + buttonGap;
 
                     if (GUI.Button(new Rect(buttonX, buttonY, buttonWidth, buttonHeight),
