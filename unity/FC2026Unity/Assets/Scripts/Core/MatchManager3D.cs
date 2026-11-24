@@ -1994,9 +1994,12 @@ namespace FC2026.Core
 
             var right = safeRight - 24f;
             var bottom = safeBottom - 24f;
-            var actionSize = Mathf.Clamp(Screen.height * 0.105f, 62f, 88f);
-            var gap = actionSize * 0.13f;
-            var actionFont = Mathf.Clamp(Mathf.RoundToInt(actionSize * 0.17f), 9, 15);
+            var preferredActionSize = Mathf.Clamp(Screen.height * 0.105f, 62f, 88f);
+            var availableControlHeight = Mathf.Max(0f, safeBottom - 24f - safeTop - 18f);
+            var actionSize = Mathf.Clamp(
+                Mathf.Min(preferredActionSize, availableControlHeight / 5.4f), 46f, 88f);
+            var gap = actionSize * 0.1f;
+            var actionFont = Mathf.Clamp(Mathf.RoundToInt(actionSize * 0.16f), 8, 15);
             actionPrimaryStyle ??= HubTheme.CircleButton(actionFont, true);
             actionSecondaryStyle ??= HubTheme.CircleButton(actionFont);
             Rect ActionRect(int column, int row) => new Rect(
