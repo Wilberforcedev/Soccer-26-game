@@ -202,6 +202,16 @@ namespace FC2026.Gameplay
                 Mathf.Lerp(0.62f, 0.82f, controller.PassingStat) + difficultyDecisionBonus);
             var throughBallChance = tacticPreset == MatchTacticPreset.CounterAttack ? 0.42f : 0.24f;
 
+            var underImmediatePressure = opponentDistance < 3.1f;
+            var deepDefensiveThird = ballFlat.z * attackDirection < -24f;
+            if (role == PlayerRole.Defender && deepDefensiveThird &&
+                underImmediatePressure && Random.value < 0.55f)
+            {
+                actionTimer = Random.Range(0.55f, 0.85f);
+                if (controller.AttemptClearance())
+                    return;
+            }
+
             // Counter-attacking sides look earlier for a runner in behind. If no
             // runner is available, try a safer pass before delaying the next decision.
             if (pressured && Random.value < passPreference)
