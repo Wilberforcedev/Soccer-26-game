@@ -59,6 +59,8 @@ namespace FC2026.Core
         private float nextCommentaryAt = 8f;
         private string commentary = "The referee gets us underway!";
         private bool matchFinished;
+        private bool penaltyPending;
+        private FootballPlayerController penaltyTaker;
         private bool resultSaved;
         private GUIStyle commentaryStyle;
         private GUIStyle fullTimeStyle;
@@ -91,6 +93,9 @@ namespace FC2026.Core
         public static MatchManager3D Instance { get; private set; }
         public static bool IsLive => Instance != null && Instance.live;
         public bool Live => live;
+        public bool IsPenaltyTaker(FootballPlayerController controller) =>
+            penaltyPending && penaltyTaker == controller && ball != null && ball.IsOwnedBy(controller);
+
 
         private void Awake()
         {
@@ -623,6 +628,27 @@ namespace FC2026.Core
                 StartCoroutine(RestartPlay(new Vector3(0f, 0.14f, 0f), 1, false, 0.8f, "RESTART"));
         }
 
+        public bool AwardFoul(int fouledTeamDirection, Vector3 foulPosition)
+        {
+            if (!live || resetting || matchFinished)
+                return false;
+
+            var awardedDirection = fouledTeamDirection >= 0 ? 1 : -1;
+            var spot = new Vector3(
+                Mathf.Clamp(foulPosition.x, -PitchWidth * 0.5f + 1f, PitchWidth * 0.5f - 1f),
+                0.14f,
+                Mathf.Clamp(foulPosition.z, -PitchLength * 0.5f + 1f, PitchLength * 0.5f - 1f));
+            var distanceFromOwnGoal = -spot.z * awardedDirection;
+            var inPenaltyArea = Mathf.Abs(spot.x) <= 20.16f && distanceFromOwnGoal >= 36f;
+            var label = inPenaltyArea ? "PENALTY" : "FREE KICK";
+
+            if (inPenaltyArea)
+                spot = new Vector3(0f, 0.14f, -awardedDirection * 41.5f);
+
+            StartCoroutine(RestartPlay(spot, awardedDirection, false, 1.15f, label));
+            return true;
+        }
+
         private IEnumerator RestartPlay(Vector3 spot, int awardedDirection, bool useGoalkeeper, float delay, string label)
         {
             offsideCandidates.Clear();
@@ -632,6 +658,8 @@ namespace FC2026.Core
                 : 0;
             resetting = true;
             live = false;
+            penaltyPending = label == "PENALTY";
+            penaltyTaker = null;
 
             if (ball != null)
                 ball.ResetBall(spot);
@@ -654,6 +682,23 @@ namespace FC2026.Core
                     taker.Body.angularVelocity = Vector3.zero;
                 }
                 ball.ForcePossession(taker);
+                if (label == "PENALTY")
+                {
+                    penaltyTaker = taker;
+                    var goalkeeper = FindGoalkeeper(-awardedDirection);
+                    if (goalkeeper != null)
+                    {
+                        goalkeeper.transform.position = new Vector3(
+                            0f, goalkeeper.transform.position.y, -awardedDirection * 51.4f);
+                        goalkeeper.transform.rotation = Quaternion.LookRotation(
+                            new Vector3(0f, 0f, awardedDirection), Vector3.up);
+                        if (goalkeeper.Body != null)
+                        {
+                            goalkeeper.Body.linearVelocity = Vector3.zero;
+                            goalkeeper.Body.angularVelocity = Vector3.zero;
+                        }
+                    }
+                }
             }
 
             goalBanner = label;
@@ -662,6 +707,8 @@ namespace FC2026.Core
             {
                 "CORNER" => "A corner kick is awarded. Bodies pile into the box.",
                 "GOAL KICK" => "The goalkeeper will restart play from the back.",
+                "FREE KICK" => "A free kick is awarded after a foul.",
+                "PENALTY" => "A penalty kick is awarded.",
                 "THROW-IN" => "A throw-in restarts the game down the touchline.",
                 "OFFSIDE" => "An offside offence is given. The other team takes an indirect free kick.",
                 _ => "Play restarts."
