@@ -1545,7 +1545,7 @@ namespace FC2026.Core
                 var safeBottom = Screen.height - desktopSafeArea.yMin;
                 GUI.Label(new Rect(desktopSafeArea.xMin + 18f, safeBottom - 48f,
                     Mathf.Max(0f, desktopSafeArea.width - 36f), 36f),
-                    "WASD / arrows: move   •   Shift: sprint   •   Space: shoot   •   E: pass/hold lob   •   R: lob   •   Q: through ball   •   X: tackle   •   C: call pressure   •   V: shield   •   B: low shot   •   Tab: switch   •   P / Esc: pause",
+                    "WASD / arrows: move   •   Shift: sprint   •   Space: shoot   •   E: pass/hold lob   •   R: lob   •   Q: through ball   •   F: cross from wide areas   •   X: tackle   •   C: call pressure   •   V: shield   •   B: low shot   •   Tab: switch   •   P / Esc: pause",
                     helpStyle);
             }
 
@@ -2080,8 +2080,16 @@ namespace FC2026.Core
             var sprint = GUI.RepeatButton(ActionRect(0, 2), "SPRINT", actionSecondaryStyle);
             if (GUI.Button(ActionRect(1, 2), "SWITCH", actionSecondaryStyle))
                 userPlayer.SwitchToNearestTeammate();
-            if (GUI.Button(ActionRect(0, 3), "CHIP", actionSecondaryStyle))
-                userPlayer.QueueChipShot();
+            var crossAvailable = userPlayer.HasBall &&
+                                 Mathf.Abs(userPlayer.transform.position.x) >= 14f &&
+                                 userPlayer.transform.position.z * userPlayer.TeamDirection >= 8f;
+            if (GUI.Button(ActionRect(0, 3), crossAvailable ? "CROSS" : "CHIP", actionSecondaryStyle))
+            {
+                if (crossAvailable)
+                    userPlayer.QueueCross();
+                else
+                    userPlayer.QueueChipShot();
+            }
             if (GUI.Button(ActionRect(1, 3), "FINESSE", actionSecondaryStyle))
                 userPlayer.QueueFinesseShot();
 
