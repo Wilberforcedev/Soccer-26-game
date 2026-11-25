@@ -659,7 +659,11 @@ namespace FC2026.Gameplay
             if (side == 0f)
                 side = Random.value < 0.5f ? -1f : 1f;
 
-            var aimInput = Application.isMobilePlatform ? mobileMove.x : Input.GetAxisRaw("Horizontal");
+            // Only the user-controlled player reads directional aim input.
+            // CPU shot placement must not change with the human player's movement.
+            var aimInput = IsUserControlled
+                ? Application.isMobilePlatform ? mobileMove.x : Input.GetAxisRaw("Horizontal")
+                : 0f;
             return Mathf.Clamp(side * 2.6f + aimInput * 0.85f, -3.3f, 3.3f);
         }
 
