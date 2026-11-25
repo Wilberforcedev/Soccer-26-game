@@ -335,15 +335,6 @@ namespace FC2026.Gameplay
             target.x = Mathf.Clamp(target.x, -27f, 27f);
             target.z = Mathf.Clamp(target.z, -48f, 48f);
 
-            // Keep support runners onside while the teammate still has the ball.
-            var onsideLimit = FindOnsideAttackLimit(ballFlat);
-            if (!float.IsPositiveInfinity(onsideLimit))
-            {
-                var safeForwardLimit = onsideLimit - 0.75f;
-                if (target.z * attackDirection > safeForwardLimit)
-                    target.z = safeForwardLimit * attackDirection;
-            }
-
             // Leave room for the ball carrier and make a supporting angle.
             if (distToBall < 5f)
             {
@@ -353,7 +344,19 @@ namespace FC2026.Gameplay
             }
 
             var speed = role == PlayerRole.Forward ? moveSpeed * sprintMultiplier : moveSpeed;
-            MoveTowards(AvoidCrowding(target), speed, 18f);
+            var finalTarget = AvoidCrowding(target);
+
+            // Apply the offside limit after spacing and crowd avoidance so neither
+            // adjustment can send a support runner beyond the defensive line.
+            var onsideLimit = FindOnsideAttackLimit(ballFlat);
+            if (!float.IsPositiveInfinity(onsideLimit))
+            {
+                var safeForwardLimit = onsideLimit - 0.75f;
+                if (finalTarget.z * attackDirection > safeForwardLimit)
+                    finalTarget.z = safeForwardLimit * attackDirection;
+            }
+
+            MoveTowards(finalTarget, speed, 18f);
         }
 
         private float FindOnsideAttackLimit(Vector3 ballFlat)
