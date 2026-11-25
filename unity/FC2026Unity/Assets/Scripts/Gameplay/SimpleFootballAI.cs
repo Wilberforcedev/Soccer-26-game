@@ -359,7 +359,14 @@ namespace FC2026.Gameplay
             var target = ballFlat + Flat(owner.Body != null ? owner.Body.linearVelocity : Vector3.zero) * 0.12f;
             MoveTowards(target, moveSpeed * pressSpeedMultiplier, 22f);
 
-            if (distToBall <= 1.9f && tackleTimer <= 0f)
+            var activeUser = FootballPlayerController.ActiveUserPlayer;
+            var isUserTeamSupport = activeUser != null &&
+                                    controller.TeamId == activeUser.TeamId &&
+                                    !controller.IsUserControlled;
+
+            // Teammates pressure and hold their position, but the user chooses
+            // when to switch in and commit to a tackle. CPU opponents still tackle.
+            if (!isUserTeamSupport && distToBall <= 1.9f && tackleTimer <= 0f)
             {
                 // Throttle AI tackle attempts so the defender does not trigger one every physics tick.
                 tackleTimer = 0.65f;
