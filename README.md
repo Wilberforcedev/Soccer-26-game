@@ -18,6 +18,7 @@ The current 3D build includes:
 
 - regulation-scale pitch, stadium, floodlights, and 22 physical players
 - Rigidbody football physics, passing, shooting, tackling, goalkeeper behavior, and positional AI
+- Pressure-aware clearances from CPU defenders near their own goal
 - keyboard and Android touch controls
 - dynamic broadcast camera, match score, and goal detection
 - generated fictional clubs, players, and kits
