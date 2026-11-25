@@ -560,7 +560,19 @@ namespace FC2026.Gameplay
                 carrierResistance - shieldResistance,
                 0f, 0.9f);
             if (Random.value > chance)
+            {
+                var carrier = ball.Owner;
+                var carrierForward = carrier.LastMoveDirection.sqrMagnitude > 0.01f
+                    ? carrier.LastMoveDirection.normalized
+                    : carrier.transform.forward;
+                var tacklerFromCarrier = transform.position - carrier.transform.position;
+                tacklerFromCarrier.y = 0f;
+                var challengeFromBehind = Vector3.Dot(carrierForward, tacklerFromCarrier) < -0.15f;
+                var foulChance = Mathf.Lerp(0.14f, 0.05f, defendingStat);
+                if (challengeFromBehind && Random.value < foulChance)
+                    MatchManager3D.Instance?.AwardFoul(carrier.TeamDirection, carrier.transform.position);
                 return false;
+            }
 
             ball.Steal(this);
             MatchManager3D.Instance?.RecordTackleWon(TeamId);
