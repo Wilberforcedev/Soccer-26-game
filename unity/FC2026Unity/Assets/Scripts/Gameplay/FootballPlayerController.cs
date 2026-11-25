@@ -33,6 +33,7 @@ namespace FC2026.Gameplay
         private bool mobilePassHeld;
         private float passHoldTime;
         private bool throughBallQueued;
+        private bool crossQueued;
         private bool shootQueued;
         private bool chipShotQueued;
         private bool finesseShotQueued;
@@ -222,6 +223,8 @@ namespace FC2026.Gameplay
                 throughBallQueued = true;
             if (Input.GetKeyDown(KeyCode.B))
                 QueueLowDrivenShot();
+            if (Input.GetKeyDown(KeyCode.F))
+                QueueCross();
             if (Input.GetKeyDown(KeyCode.X) || Input.GetKeyDown(KeyCode.JoystickButton1))
                 tackleQueued = true;
             if (Input.GetKeyDown(KeyCode.Tab))
@@ -303,6 +306,12 @@ namespace FC2026.Gameplay
             {
                 throughBallQueued = false;
                 AttemptPass(true);
+            }
+
+            if (crossQueued)
+            {
+                crossQueued = false;
+                AttemptCross();
             }
 
             if (shootQueued)
@@ -410,6 +419,7 @@ namespace FC2026.Gameplay
         public void QueuePass() { loftedPassQueued = false; passQueued = true; }
         public void QueueLoftedPass() { loftedPassQueued = true; passQueued = true; }
         public void QueueThroughBall() => throughBallQueued = true;
+        public void QueueCross() => crossQueued = true;
         public void QueueShot() { queuedShotPower01 = 0f; lowDrivenShotQueued = false; shootQueued = true; }
         public void QueueChipShot() { queuedShotPower01 = 0f; lowDrivenShotQueued = false; chipShotQueued = true; shootQueued = true; }
         public void QueueFinesseShot() { queuedShotPower01 = 0f; lowDrivenShotQueued = false; finesseShotQueued = true; shootQueued = true; }
@@ -431,6 +441,7 @@ namespace FC2026.Gameplay
             mobilePassHeld = false;
             passHoldTime = 0f;
             throughBallQueued = false;
+            crossQueued = false;
             shootQueued = false;
             chipShotQueued = false;
             finesseShotQueued = false;
@@ -665,6 +676,49 @@ namespace FC2026.Gameplay
                 ? Application.isMobilePlatform ? mobileMove.x : Input.GetAxisRaw("Horizontal")
                 : 0f;
             return Mathf.Clamp(side * 2.6f + aimInput * 0.85f, -3.3f, 3.3f);
+        }
+
+        public bool AttemptCross()
+        {
+            var ball = BallController.Instance;
+            if (!CanPlayBall(ball) || kickLock > 0f)
+                return false;
+
+            // Crosses are a wide attacking option, aimed into the box rather than at a teammate.
+            var attackingProgress = transform.position.z * TeamDirection;
+            if (Mathf.Abs(transform.position.x) < 14f || attackingProgress < 8f)
+                return false;
+
+            var aimX = IsUserControlled
+                ? Application.isMobilePlatform ? mobileMove.x : Input.GetAxisRaw("Horizontal")
+                : 0f;
+            var forwardAim = IsUserControlled
+                ? (Application.isMobilePlatform ? mobileMove.y : Input.GetAxisRaw("Vertical")) * TeamDirection
+                : 0f;
+            var targetX = Mathf.Clamp(-Mathf.Sign(transform.position.x) * 3.3f + aimX * 3.2f, -6.5f, 6.5f);
+            var targetProgress = Mathf.Clamp(44f + forwardAim * 2.5f, 39f, 49f);
+            var target = new Vector3(targetX, 0f, targetProgress * TeamDirection);
+            var flat = new Vector3(target.x - ball.Position.x, 0f, target.z - ball.Position.z);
+            if (flat.sqrMagnitude < 0.01f)
+                return false;
+            var distance = flat.magnitude;
+            flat.Normalize();
+
+            var pressureDistance = NearestOpponentDistance(transform.position);
+            var crossError = (1f - passingStat) * 1.8f +
+                             Mathf.Lerp(1.1f, 0f, Mathf.InverseLerp(1.5f, 6f, pressureDistance)) +
+                             (1f - stamina) * 0.6f;
+            flat = (flat + transform.right * Random.Range(-crossError * 0.035f, crossError * 0.035f)).normalized;
+
+            var speed = Mathf.Clamp(15.5f + distance * 0.25f, 16f, 22f) *
+                        Mathf.Lerp(0.92f, 1.04f, passingStat);
+            var lift = Mathf.Lerp(0.32f, 0.43f, Mathf.InverseLerp(12f, 28f, distance));
+            var useLeftFoot = SelectLeftFoot(ball.Position);
+            motion?.TriggerPass(useLeftFoot);
+            ball.Kick(flat, speed, lift, transform, Mathf.Sign(-transform.position.x) * 0.8f);
+            MatchManager3D.Instance?.RegisterPassForOffside(this);
+            kickLock = 0.34f;
+            return true;
         }
 
         public bool AttemptPass(bool throughBall, bool lofted = false)
