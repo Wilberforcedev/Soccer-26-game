@@ -721,6 +721,25 @@ namespace FC2026.Gameplay
             return true;
         }
 
+        public bool AttemptClearance()
+        {
+            var ball = BallController.Instance;
+            if (!CanPlayBall(ball) || kickLock > 0f)
+                return false;
+
+            // Send danger away from the middle and upfield when a defender is pressed near goal.
+            var side = Mathf.Abs(transform.position.x) > 2f
+                ? Mathf.Sign(transform.position.x)
+                : (Random.value < 0.5f ? -1f : 1f);
+            var direction = new Vector3(side * 0.48f, 0f, TeamDirection * 0.88f).normalized;
+            var useLeftFoot = SelectLeftFoot(ball.Position);
+            motion?.TriggerPass(useLeftFoot);
+            ball.Kick(direction, Mathf.Lerp(19f, 22f, physicalStat), 0.22f, transform, 0f);
+            MatchManager3D.Instance?.RegisterPassForOffside(this);
+            kickLock = 0.42f;
+            return true;
+        }
+
         public bool AttemptPass(bool throughBall, bool lofted = false)
         {
             var ball = BallController.Instance;
