@@ -4,6 +4,7 @@
 
 - [x] Make CPU attackers consider nearby pressure, open shooting space, and player passing/shooting skill.
 - [x] Keep defending players closer to a goal-side position while preserving their starting shape.
+- [x] Let pressured CPU defenders clear danger from their own defensive third.
 - [x] Add acceleration to carried-ball movement so the ball responds less like it is attached to the player.
 - [x] Make difficult first touches more likely under pressure and at higher incoming ball speeds.
 - [x] Let consecutive defensive switches cycle to another nearby outfielder instead of immediately returning to the last player.
