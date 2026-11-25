@@ -200,13 +200,16 @@ namespace FC2026.Gameplay
                 Mathf.Lerp(0.28f, 0.72f, controller.ShootingStat) + difficultyDecisionBonus);
             var passPreference = Mathf.Clamp01(
                 Mathf.Lerp(0.62f, 0.82f, controller.PassingStat) + difficultyDecisionBonus);
+            var throughBallChance = tacticPreset == MatchTacticPreset.CounterAttack ? 0.42f : 0.24f;
 
-            // When a defender is close, prefer releasing the ball instead of
-            // taking a rushed shot. Passing skill influences that choice.
+            // Counter-attacking sides look earlier for a runner in behind. If no
+            // runner is available, try a safer pass before delaying the next decision.
             if (pressured && Random.value < passPreference)
             {
                 actionTimer = Random.Range(0.35f, 0.65f);
-                if (controller.AttemptPass(Random.value < 0.25f))
+                var tryThroughBall = Random.value < throughBallChance;
+                if (controller.AttemptPass(tryThroughBall) ||
+                    (tryThroughBall && controller.AttemptPass(false)))
                     return;
             }
 
@@ -227,7 +230,9 @@ namespace FC2026.Gameplay
             if (shouldPass)
             {
                 actionTimer = Random.Range(0.4f, 0.75f);
-                if (controller.AttemptPass(Random.value < 0.24f))
+                var tryThroughBall = Random.value < throughBallChance;
+                if (controller.AttemptPass(tryThroughBall) ||
+                    (tryThroughBall && controller.AttemptPass(false)))
                     return;
             }
         }
