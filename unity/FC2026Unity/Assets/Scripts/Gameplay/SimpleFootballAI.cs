@@ -223,6 +223,16 @@ namespace FC2026.Gameplay
                     return;
             }
 
+            var inCrossingArea = Mathf.Abs(ballFlat.x) > 16f &&
+                                 distanceToGoal > 8f && distanceToGoal < 27f;
+            if (inCrossingArea && HasAttackingRunnerInBox() &&
+                Random.value < Mathf.Lerp(0.48f, 0.78f, controller.PassingStat))
+            {
+                actionTimer = Random.Range(0.55f, 0.9f);
+                if (controller.AttemptCross())
+                    return;
+            }
+
             var shouldPass = pressured || distanceToGoal > 34f ||
                              Random.value < Mathf.Clamp01(
                                  Mathf.Lerp(0.22f, 0.42f, controller.PassingStat) +
@@ -235,6 +245,23 @@ namespace FC2026.Gameplay
                     (tryThroughBall && controller.AttemptPass(false)))
                     return;
             }
+        }
+
+        private bool HasAttackingRunnerInBox()
+        {
+            foreach (var candidate in FootballPlayerController.All)
+            {
+                if (candidate == null || candidate == controller ||
+                    candidate.TeamDirection != attackDirection || candidate.IsGoalkeeper)
+                    continue;
+
+                var position = Flat(candidate.transform.position);
+                var distanceToGoal = Mathf.Abs(attackDirection * 52.5f - position.z);
+                if (distanceToGoal < 18f && Mathf.Abs(position.x) < 19f)
+                    return true;
+            }
+
+            return false;
         }
 
         private bool HasClearShootingLane(Vector3 ballFlat, Vector3 goal)
