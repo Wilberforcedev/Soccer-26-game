@@ -49,15 +49,22 @@ See [UNITY_3D.md](UNITY_3D.md) for Android builds and the project details.
 
 - **WASD / Arrow keys** — move
 - **Shift** — sprint
-- **Space** — shoot
-- **E** — pass
+- **Hold Space** — charge a shot; release to shoot
+- **E** — ground pass; hold briefly for a lofted pass
+- **R** — lofted pass
 - **Q** — through ball
 - **X** — tackle
+- **C** — call a teammate to pressure the ball carrier while held
+- **V** — shield the ball while held
+- **B** — low-driven shot
 - **Tab** — switch to the nearest teammate to the ball
+- **1 / 2 / 3** — balanced, high-press, or counter-attack team tactics
+- **4 / 5 / 6** — easy, standard, or hard CPU difficulty
+- **P / Esc** — pause or resume
 
 ### Android
 
-Use the virtual joystick to move and the on-screen action buttons to sprint, shoot, pass, play a through ball, tackle, chip, or finesse. The **Switch** button selects the nearest teammate to the ball.
+Use the virtual joystick to move. The on-screen buttons provide sprint, shoot, pass, through ball, tackle, pressure, player switching, chip shot, finesse shot, shielding, and low-driven shot. Hold **Shoot** to charge power and hold **Pass/Lob** to play a lofted pass. Tactics and CPU difficulty can be changed from the pause menu.
 
 ## Android builds
 
