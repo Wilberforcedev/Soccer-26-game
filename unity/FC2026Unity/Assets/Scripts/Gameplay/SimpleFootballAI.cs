@@ -186,6 +186,16 @@ namespace FC2026.Gameplay
 
             MoveTowards(AvoidCrowding(ballFlat + direction * 6f), moveSpeed * 0.96f, 20f);
 
+            var match = MatchManager3D.Instance;
+            if (!controller.IsUserControlled && match != null && match.IsPenaltyTaker(controller))
+            {
+                if (controller.AttemptShot(false, false))
+                {
+                    actionTimer = 1.2f;
+                    return;
+                }
+            }
+
             if (actionTimer > 0f)
                 return;
 
