@@ -526,6 +526,44 @@ namespace FC2026.Gameplay
                 Mathf.Clamp(Mathf.Lerp(ballFlat.x, 0f, 0.35f), -18f, 18f),
                 0f,
                 Mathf.Clamp(ballFlat.z - attackDirection * 4.5f, -49f, 49f));
+
+            var owner = BallController.Instance != null ? BallController.Instance.Owner : null;
+            if (owner != null && owner.TeamDirection != attackDirection)
+            {
+                FootballPlayerController receiver = null;
+                var bestLaneScore = float.MaxValue;
+                foreach (var candidate in FootballPlayerController.All)
+                {
+                    if (candidate == null || candidate == owner || candidate.TeamDirection != owner.TeamDirection ||
+                        candidate.IsGoalkeeper)
+                        continue;
+
+                    var receiverPosition = Flat(candidate.transform.position);
+                    var offset = receiverPosition - ballFlat;
+                    var distance = offset.magnitude;
+                    var forwardRun = offset.z * owner.TeamDirection;
+                    if (distance > 24f || forwardRun < 2.5f || forwardRun > 22f)
+                        continue;
+
+                    // Favor a reachable runner who has made progress beyond the ball.
+                    var laneScore = distance - Mathf.Min(forwardRun, 14f) * 0.3f;
+                    if (laneScore >= bestLaneScore)
+                        continue;
+
+                    bestLaneScore = laneScore;
+                    receiver = candidate;
+                }
+
+                if (receiver != null)
+                {
+                    var receiverPosition = Flat(receiver.transform.position);
+                    target = Vector3.Lerp(ballFlat, receiverPosition, 0.58f);
+                    target.z -= attackDirection * 1.25f;
+                    target.x = Mathf.Clamp(target.x, -26f, 26f);
+                    target.z = Mathf.Clamp(target.z, -49f, 49f);
+                }
+            }
+
             MoveTowards(AvoidCrowding(target), moveSpeed * 0.9f, 18f);
         }
 
