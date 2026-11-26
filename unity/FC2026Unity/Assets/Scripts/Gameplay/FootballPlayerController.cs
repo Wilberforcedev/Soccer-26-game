@@ -151,6 +151,8 @@ namespace FC2026.Gameplay
                 SetCornerAvoidanceHeld(false);
                 mobileCornerShieldHeld = false;
                 mobileCornerAvoidanceHeld = false;
+                passFollowArmed = false;
+                passFollowRunActive = false;
             }
 
             IsUserControlled = active;
@@ -236,6 +238,8 @@ namespace FC2026.Gameplay
                 passHoldTime = 0f;
             }
             passInputHeld = passHeld;
+            if (passFollowArmed && !HasBall && !passInputHeld)
+                passFollowArmed = false;
 
             UpdateSecondaryPress();
             var shotHeld = mobileShotHeld || Input.GetKey(KeyCode.Space) || Input.GetKey(KeyCode.JoystickButton0);
