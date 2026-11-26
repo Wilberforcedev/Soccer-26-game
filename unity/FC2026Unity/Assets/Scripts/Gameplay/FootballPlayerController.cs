@@ -598,6 +598,9 @@ namespace FC2026.Gameplay
         {
             var ball = BallController.Instance;
             var header = CanHeaderBall(ball);
+            if (header && MatchManager3D.Instance != null &&
+                MatchManager3D.Instance.CheckOffsideContact(this))
+                return false;
             if ((!header && !CanPlayBall(ball)) || kickLock > 0f)
                 return false;
 
