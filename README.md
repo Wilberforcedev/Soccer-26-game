@@ -18,6 +18,7 @@ The current 3D build includes:
 
 - regulation-scale pitch, stadium, floodlights, and 22 physical players
 - Rigidbody football physics, passing, shooting, tackling, goalkeeper behavior, and positional AI
+- Crosses into space, timed player headers, and curved runs that respect the offside line
 - Rear challenges can draw a foul, with free kicks and penalty restarts
 - Pressure-aware clearances from CPU defenders near their own goal
 - keyboard and Android touch controls
@@ -51,7 +52,7 @@ See [UNITY_3D.md](UNITY_3D.md) for Android builds and the project details.
 
 - **WASD / Arrow keys** — move
 - **Shift** — sprint
-- **Hold Space** — charge a shot; release to shoot
+- **Hold Space** — charge a shot; release to shoot or head a reachable aerial ball
 - **E** — ground pass; hold briefly for a lofted pass
 - **R** — lofted pass
 - **F** — cross into space from a wide attacking position
@@ -68,7 +69,7 @@ See [UNITY_3D.md](UNITY_3D.md) for Android builds and the project details.
 
 ### Android
 
-Use the virtual joystick to move. The on-screen buttons provide sprint, shoot, pass, through ball, tackle, pressure, player switching, chip shot or cross, finesse shot, shielding, and low-driven shot. The **Chip** button becomes **Cross** when carrying the ball in a wide attacking position. The **Run** button sends an off-ball teammate on a limited curved run when your team has possession. Hold **Shoot** to charge power and hold **Pass/Lob** to play a lofted pass. Tactics and CPU difficulty can be changed from the pause menu.
+Use the virtual joystick to move. The on-screen buttons provide sprint, shoot, pass, through ball, tackle, pressure, player switching, chip shot or cross, finesse shot, shielding, and low-driven shot. Tap **Shoot** when a high loose cross is within reach to attempt a header. The **Chip** button becomes **Cross** when carrying the ball in a wide attacking position. The **Run** button sends an off-ball teammate on a limited curved run when your team has possession. Hold **Shoot** to charge power and hold **Pass/Lob** to play a lofted pass. Tactics and CPU difficulty can be changed from the pause menu.
 
 ## Android builds
 
