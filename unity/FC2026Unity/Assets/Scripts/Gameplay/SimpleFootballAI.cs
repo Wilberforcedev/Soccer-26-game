@@ -199,6 +199,20 @@ namespace FC2026.Gameplay
             if (ball == null || controller == null)
                 return;
 
+            if (MatchManager3D.IsCornerPrep)
+            {
+                if (controller.IsUserControlled)
+                    return;
+                if (controller == MatchManager3D.Instance?.CornerPrepTaker)
+                {
+                    Brake();
+                    return;
+                }
+
+                PositionForCorner();
+                return;
+            }
+
             if (!MatchManager3D.IsLive)
             {
                 Brake();
@@ -217,6 +231,35 @@ namespace FC2026.Gameplay
                 UpdateGoalkeeper(ball);
             else
                 UpdateOutfield(ball);
+        }
+
+        private void PositionForCorner()
+        {
+            var match = MatchManager3D.Instance;
+            if (match == null || controller == null)
+            {
+                Brake();
+                return;
+            }
+
+            var direction = match.CornerPrepDirection;
+            var slot = Mathf.FloorToInt(decisionOffset * 2.3f);
+            var lane = slot % 7 - 3;
+            Vector3 target;
+            if (attackDirection == direction)
+            {
+                var depth = 4f + (slot % 4) * 2.7f;
+                target = new Vector3(lane * 3.8f, 0f, direction * (52.5f - depth));
+            }
+            else
+            {
+                var goalZ = -direction * 52.5f;
+                var depth = 1.5f + (slot % 4) * 2.4f;
+                target = new Vector3(lane * 3.2f, 0f, goalZ + direction * depth);
+            }
+
+            target.x = Mathf.Clamp(target.x, -16f, 16f);
+            MoveTowards(target, moveSpeed * 0.78f, 18f);
         }
 
         private void UpdateOutfield(BallController ball)
