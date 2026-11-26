@@ -44,6 +44,7 @@ namespace FC2026.Gameplay
         private bool mobileSecondManPressHeld;
         private bool mobileShieldHeld;
         private bool mobileCornerShieldHeld;
+        private bool mobileCornerAvoidanceHeld;
         private bool cornerAvoidanceActive;
         private readonly List<(Collider own, Collider other)> cornerIgnoredCollisions = new();
 
@@ -142,6 +143,7 @@ namespace FC2026.Gameplay
             {
                 SetCornerAvoidanceHeld(false);
                 mobileCornerShieldHeld = false;
+                mobileCornerAvoidanceHeld = false;
             }
 
             IsUserControlled = active;
@@ -199,16 +201,19 @@ namespace FC2026.Gameplay
                 mobileSecondManPressHeld = false;
                 mobileShieldHeld = false;
                 mobileShotHeld = false;
+                mobileCornerShieldHeld = false;
+                mobileCornerAvoidanceHeld = false;
             }
 
             if (MatchManager3D.IsCornerPrep)
             {
-                SetCornerAvoidanceHeld(Input.GetKey(KeyCode.Z) || cornerAvoidanceActive);
+                SetCornerAvoidanceHeld(Input.GetKey(KeyCode.Z) || mobileCornerAvoidanceHeld);
                 return;
             }
 
             SetCornerAvoidanceHeld(false);
             mobileCornerShieldHeld = false;
+            mobileCornerAvoidanceHeld = false;
 
             var passHeld = mobilePassHeld || Input.GetKey(KeyCode.E) || Input.GetKey(KeyCode.JoystickButton2);
             if (passHeld)
@@ -457,6 +462,11 @@ namespace FC2026.Gameplay
         public void SetMobileShieldHeld(bool held) => mobileShieldHeld = held;
 
         public void SetMobileCornerShieldHeld(bool held) => mobileCornerShieldHeld = held;
+        public void SetMobileCornerAvoidanceHeld(bool held)
+        {
+            mobileCornerAvoidanceHeld = held;
+            SetCornerAvoidanceHeld(held);
+        }
         public void SetCornerAvoidanceHeld(bool held)
         {
             if (cornerAvoidanceActive == held)
