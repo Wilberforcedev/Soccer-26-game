@@ -731,7 +731,7 @@ namespace FC2026.Core
                 _ => "Play restarts."
             };
 
-            if (label == "CORNER" && awardedDirection == 1 && taker != null)
+            if (label == "CORNER" && taker != null && userPlayer != null && taker.TeamId == userPlayer.TeamId)
             {
                 BeginCornerPreparation(spot, awardedDirection, taker);
                 yield return new WaitUntil(() => !cornerPrepActive || matchFinished);
