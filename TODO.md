@@ -23,6 +23,7 @@
 - [x] Add lofted passing with a quick-tap ground pass and a hold-to-lob mobile control.
 - [x] Add crosses aimed into attacking space from wide positions, including CPU delivery when a runner is in the box.
 - [x] Add timing- and skill-dependent aerial headers from crosses, with CPU attempts near goal.
+- [x] Add a user-controlled corner setup phase with attackers and defenders moving into the box before delivery.
 - [x] Enforce basic offside positions on passes and restart play with an indirect free kick when an offside player touches the ball.
 - [x] Add contextual movement animation for turns and ball-carrying, with sprinting, passing, and shooting actions.
 
