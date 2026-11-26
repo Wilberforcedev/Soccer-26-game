@@ -299,7 +299,7 @@ namespace FC2026.Gameplay
             cooldownUntil = Time.time + ReclaimDelay;
 
             var speed = Mathf.Clamp(power, 2.5f, MaxSpeed);
-            var lift01 = Mathf.Clamp(lift, 0f, 0.92f);
+            var lift01 = Mathf.Clamp(lift, -0.35f, 0.92f);
             var verticalSpeed = speed * lift01;
             var horizontalSpeed = Mathf.Sqrt(Mathf.Max(0.04f, speed * speed - verticalSpeed * verticalSpeed));
 
