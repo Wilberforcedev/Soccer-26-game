@@ -538,6 +538,15 @@ namespace FC2026.Gameplay
 
         private void ChaseLooseBall(BallController ball, Vector3 ballFlat, float distToBall)
         {
+            if (actionTimer <= 0f && distToBall <= 2.05f &&
+                ball.Position.y >= 0.95f && ball.Position.y <= 2.35f &&
+                Mathf.Abs(attackDirection * 52.5f - ballFlat.z) < 25f &&
+                controller.AttemptShot())
+            {
+                actionTimer = 0.72f;
+                return;
+            }
+
             var intercept = ballFlat + Flat(ball.Velocity) * 0.2f;
             MoveTowards(intercept, moveSpeed * sprintMultiplier, 21f);
 
