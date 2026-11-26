@@ -39,8 +39,102 @@ namespace FC2026.Gameplay
         private float tackleTimer;
         private float diveTimer;
         private MatchTacticPreset tacticPreset = MatchTacticPreset.Balanced;
+        private Vector3 triggeredRunStart;
+        private Vector3 triggeredRunTarget;
+        private float triggeredRunSide;
+        private float triggeredRunTime;
+
 
         public int TeamDirection => attackDirection;
+
+        public static bool TriggerCurvedRun(FootballPlayerController carrier)
+        {
+            var ball = BallController.Instance;
+            if (carrier == null || ball == null || ball.Owner == null ||
+                ball.Owner.TeamId != carrier.TeamId)
+                return false;
+
+            var ballFlat = Flat(ball.Position);
+            SimpleFootballAI runner = null;
+            var bestScore = float.MaxValue;
+
+            foreach (var candidate in FootballPlayerController.All)
+            {
+                if (candidate == null || candidate == carrier ||
+                    candidate.TeamDirection != carrier.TeamDirection ||
+                    candidate.IsGoalkeeper || candidate.IsUserControlled)
+                    continue;
+
+                var candidateAi = candidate.GetComponent<SimpleFootballAI>();
+                if (candidateAi == null)
+                    continue;
+
+                var position = Flat(candidate.transform.position);
+                var forwardGap = (position.z - ballFlat.z) * carrier.TeamDirection;
+                var distance = Vector3.Distance(position, ballFlat);
+                if (distance > 24f || forwardGap < -8f || forwardGap > 22f)
+                    continue;
+
+                var score = distance + Mathf.Abs(forwardGap - 6f) * 0.12f;
+                if (candidate.Role == PlayerRole.Forward)
+                    score -= 2f;
+                if (score < bestScore)
+                {
+                    bestScore = score;
+                    runner = candidateAi;
+                }
+            }
+
+            if (runner == null)
+                return false;
+
+            var start = Flat(runner.transform.position);
+            var startProgress = start.z * carrier.TeamDirection;
+            var targetProgress = Mathf.Min(startProgress + 16f, 48f);
+            var onsideLimit = runner.FindOnsideAttackLimit(ballFlat);
+            if (!float.IsPositiveInfinity(onsideLimit))
+                targetProgress = Mathf.Min(targetProgress, onsideLimit - 0.75f);
+            if (targetProgress - startProgress < 2.5f)
+                return false;
+
+            var chosenSide = 1f;
+            var bestSpace = float.NegativeInfinity;
+            for (var side = -1; side <= 1; side += 2)
+            {
+                var targetX = Mathf.Clamp(start.x + side * 5.5f, -27f, 27f);
+                var nearestOpponent = float.MaxValue;
+                foreach (var opponent in FootballPlayerController.All)
+                {
+                    if (opponent == null || opponent.TeamDirection == carrier.TeamDirection)
+                        continue;
+
+                    var opponentPosition = Flat(opponent.transform.position);
+                    nearestOpponent = Mathf.Min(nearestOpponent,
+                        Vector2.Distance(new Vector2(targetX, targetProgress * carrier.TeamDirection),
+                            new Vector2(opponentPosition.x, opponentPosition.z)));
+                }
+
+                if (nearestOpponent > bestSpace)
+                {
+                    bestSpace = nearestOpponent;
+                    chosenSide = side;
+                }
+            }
+
+            runner.BeginCurvedRun(new Vector3(
+                Mathf.Clamp(start.x + chosenSide * 5.5f, -27f, 27f),
+                0f,
+                targetProgress * carrier.TeamDirection), chosenSide);
+            return true;
+        }
+
+        private void BeginCurvedRun(Vector3 target, float side)
+        {
+            triggeredRunStart = Flat(transform.position);
+            triggeredRunTarget = target;
+            triggeredRunSide = side;
+            triggeredRunTime = 4.5f;
+        }
 
         public void SetTacticPreset(MatchTacticPreset preset) => tacticPreset = preset;
 
@@ -111,6 +205,7 @@ namespace FC2026.Gameplay
                 motion = GetComponent<FootballMotionAnimator>();
 
             actionTimer = Mathf.Max(0f, actionTimer - Time.fixedDeltaTime);
+            triggeredRunTime = Mathf.Max(0f, triggeredRunTime - Time.fixedDeltaTime);
             tackleTimer = Mathf.Max(0f, tackleTimer - Time.fixedDeltaTime);
             diveTimer = Mathf.Max(0f, diveTimer - Time.fixedDeltaTime);
 
@@ -351,6 +446,15 @@ namespace FC2026.Gameplay
                 target.z = Mathf.Lerp(target.z, ballFlat.z + attackDirection * 8f, 0.28f);
             else if (role == PlayerRole.Midfielder)
                 target.z = Mathf.Lerp(target.z, ballFlat.z + attackDirection * 3.5f, 0.12f);
+
+            if (triggeredRunTime > 0f)
+            {
+                var runProgress = 1f - triggeredRunTime / 4.5f;
+                var curveOffset = Mathf.Sin(runProgress * Mathf.PI) * triggeredRunSide * 3.2f;
+                var runTarget = Vector3.Lerp(triggeredRunStart, triggeredRunTarget, runProgress);
+                target.x = runTarget.x + curveOffset;
+                target.z = runTarget.z;
+            }
 
             target.x = Mathf.Clamp(target.x, -27f, 27f);
             target.z = Mathf.Clamp(target.z, -48f, 48f);
