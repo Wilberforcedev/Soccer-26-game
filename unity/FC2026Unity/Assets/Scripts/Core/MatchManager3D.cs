@@ -105,7 +105,10 @@ namespace FC2026.Core
         public int CornerPrepDirection => cornerPrepDirection;
         public Vector3 CornerPrepSpot => cornerPrepSpot;
         public FootballPlayerController CornerPrepTaker => cornerTaker;
-        public bool CornerPlayersPositioning => cornerPrepActive || Time.time < cornerShapeHoldUntil;
+        public bool CornerPlayersPositioning => cornerPrepActive ||
+            (cornerTaker != null && ball != null &&
+             (ball.IsOwnedBy(cornerTaker) ||
+              (Time.time < cornerShapeHoldUntil && ball.LastKicker == cornerTaker.transform)));
 
 
         private void Awake()
@@ -191,6 +194,10 @@ namespace FC2026.Core
 
             if (paused)
                 return;
+
+            if (!cornerPrepActive && float.IsPositiveInfinity(cornerShapeHoldUntil) &&
+                cornerTaker != null && ball != null && ball.LastKicker == cornerTaker.transform)
+                cornerShapeHoldUntil = float.PositiveInfinity;
 
             if (Input.GetKeyDown(KeyCode.Alpha1))
                 ApplyHomeTactic(MatchTacticPreset.Balanced);
