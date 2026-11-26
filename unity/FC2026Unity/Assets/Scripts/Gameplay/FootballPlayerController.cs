@@ -43,6 +43,10 @@ namespace FC2026.Gameplay
         private bool tackleQueued;
         private bool mobileSecondManPressHeld;
         private bool mobileShieldHeld;
+        private bool mobileCornerShieldHeld;
+        private bool cornerAvoidanceActive;
+        private readonly List<(Collider own, Collider other)> cornerIgnoredCollisions = new();
+
         private bool mobileShotHeld;
         private bool shotChargeInputHeld;
         private float shotChargeTime;
@@ -134,6 +138,12 @@ namespace FC2026.Gameplay
 
         public void SetUserControlled(bool active)
         {
+            if (!active)
+            {
+                SetCornerAvoidanceHeld(false);
+                mobileCornerShieldHeld = false;
+            }
+
             IsUserControlled = active;
             if (active)
             {
@@ -161,6 +171,7 @@ namespace FC2026.Gameplay
 
         private void OnDisable()
         {
+            RestoreCornerAvoidance();
             Registry.Remove(this);
             if (ActiveUserPlayer == this)
                 ActiveUserPlayer = null;
@@ -191,7 +202,13 @@ namespace FC2026.Gameplay
             }
 
             if (MatchManager3D.IsCornerPrep)
+            {
+                SetCornerAvoidanceHeld(Input.GetKey(KeyCode.Z) || cornerAvoidanceActive);
                 return;
+            }
+
+            SetCornerAvoidanceHeld(false);
+            mobileCornerShieldHeld = false;
 
             var passHeld = mobilePassHeld || Input.GetKey(KeyCode.E) || Input.GetKey(KeyCode.JoystickButton2);
             if (passHeld)
@@ -343,13 +360,14 @@ namespace FC2026.Gameplay
         private void UpdateCornerPrepMovement()
         {
             var move = ReadMove();
-            var sprinting = ReadSprint() && move.sqrMagnitude > 0.02f && stamina > 0.04f;
+            var shielding = mobileCornerShieldHeld || Input.GetKey(KeyCode.V);
+            var sprinting = ReadSprint() && move.sqrMagnitude > 0.02f && stamina > 0.04f && !shielding;
             var desired = new Vector3(move.x, 0f, move.y);
             if (desired.sqrMagnitude > 1f)
                 desired.Normalize();
 
             var speed = (sprinting ? sprintSpeed : moveSpeed) * paceMultiplier *
-                        Mathf.Lerp(0.74f, 1f, stamina);
+                        Mathf.Lerp(0.74f, 1f, stamina) * (shielding ? 0.68f : 1f);
             var horizontal = new Vector3(body.linearVelocity.x, 0f, body.linearVelocity.z);
             if (desired.sqrMagnitude > 0.01f)
             {
@@ -367,7 +385,7 @@ namespace FC2026.Gameplay
             }
             else
             {
-                Decelerate(acceleration * 0.85f);
+                Decelerate(acceleration * (shielding ? 1.5f : 0.85f));
             }
 
             UpdateStamina(sprinting, horizontal.magnitude);
@@ -437,6 +455,48 @@ namespace FC2026.Gameplay
         public void SetMobilePassHeld(bool held) => mobilePassHeld = held;
         public void SetMobileSecondManPressHeld(bool held) => mobileSecondManPressHeld = held;
         public void SetMobileShieldHeld(bool held) => mobileShieldHeld = held;
+
+        public void SetMobileCornerShieldHeld(bool held) => mobileCornerShieldHeld = held;
+        public void SetCornerAvoidanceHeld(bool held)
+        {
+            if (cornerAvoidanceActive == held)
+                return;
+
+            cornerAvoidanceActive = held;
+            if (held)
+            {
+                var ownCollider = GetComponent<Collider>();
+                if (ownCollider == null)
+                    return;
+
+                foreach (var candidate in Registry)
+                {
+                    if (candidate == null || candidate.TeamDirection == TeamDirection)
+                        continue;
+
+                    var otherCollider = candidate.GetComponent<Collider>();
+                    if (otherCollider == null || !ownCollider.enabled || !otherCollider.enabled)
+                        continue;
+
+                    Physics.IgnoreCollision(ownCollider, otherCollider, true);
+                    cornerIgnoredCollisions.Add((ownCollider, otherCollider));
+                }
+                return;
+            }
+
+            RestoreCornerAvoidance();
+        }
+
+        private void RestoreCornerAvoidance()
+        {
+            foreach (var pair in cornerIgnoredCollisions)
+            {
+                if (pair.own != null && pair.other != null)
+                    Physics.IgnoreCollision(pair.own, pair.other, false);
+            }
+            cornerIgnoredCollisions.Clear();
+            cornerAvoidanceActive = false;
+        }
 
         private void UpdateSecondaryPress()
         {
