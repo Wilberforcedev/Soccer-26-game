@@ -236,6 +236,10 @@ namespace FC2026.Gameplay
             tackleTimer = Mathf.Max(0f, tackleTimer - Time.fixedDeltaTime);
             diveTimer = Mathf.Max(0f, diveTimer - Time.fixedDeltaTime);
 
+            // The selected player is moved and acted by FootballPlayerController.
+            if (controller.IsUserControlled)
+                return;
+
             if (goalkeeper)
                 UpdateGoalkeeper(ball);
             else
