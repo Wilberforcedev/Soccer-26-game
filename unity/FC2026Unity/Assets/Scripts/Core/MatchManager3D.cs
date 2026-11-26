@@ -61,6 +61,10 @@ namespace FC2026.Core
         private bool matchFinished;
         private bool penaltyPending;
         private FootballPlayerController penaltyTaker;
+        private bool cornerPrepActive;
+        private int cornerPrepDirection;
+        private Vector3 cornerPrepSpot;
+        private FootballPlayerController cornerTaker;
         private bool resultSaved;
         private GUIStyle commentaryStyle;
         private GUIStyle fullTimeStyle;
@@ -95,6 +99,11 @@ namespace FC2026.Core
         public bool Live => live;
         public bool IsPenaltyTaker(FootballPlayerController controller) =>
             penaltyPending && penaltyTaker == controller && ball != null && ball.IsOwnedBy(controller);
+
+        public static bool IsCornerPrep => Instance != null && Instance.cornerPrepActive;
+        public int CornerPrepDirection => cornerPrepDirection;
+        public Vector3 CornerPrepSpot => cornerPrepSpot;
+        public FootballPlayerController CornerPrepTaker => cornerTaker;
 
 
         private void Awake()
@@ -166,6 +175,9 @@ namespace FC2026.Core
         {
             if (matchFinished)
                 return;
+
+            if (cornerPrepActive && (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter)))
+                ConfirmCornerPreparation();
 
             if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.P))
             {
@@ -658,6 +670,8 @@ namespace FC2026.Core
                 : 0;
             resetting = true;
             live = false;
+            cornerPrepActive = false;
+            cornerTaker = null;
             penaltyPending = label == "PENALTY";
             penaltyTaker = null;
 
@@ -714,9 +728,79 @@ namespace FC2026.Core
                 _ => "Play restarts."
             };
 
-            yield return new WaitForSeconds(delay);
+            if (label == "CORNER" && awardedDirection == 1 && taker != null)
+            {
+                BeginCornerPreparation(spot, awardedDirection, taker);
+                yield return new WaitUntil(() => !cornerPrepActive || matchFinished);
+            }
+            else
+            {
+                yield return new WaitForSeconds(delay);
+            }
+
             resetting = false;
-            live = true;
+            if (!matchFinished)
+                live = true;
+        }
+
+        private void BeginCornerPreparation(Vector3 spot, int awardedDirection, FootballPlayerController taker)
+        {
+            cornerPrepActive = true;
+            cornerPrepDirection = awardedDirection;
+            cornerPrepSpot = spot;
+            cornerTaker = taker;
+            goalBanner = "CORNER SETUP";
+            goalBannerUntil = float.PositiveInfinity;
+            commentary = "Move into space before delivering the corner.";
+
+            var runnerTarget = new Vector3(0f, 0f, awardedDirection * 39f);
+            FootballPlayerController runner = null;
+            var bestDistance = float.MaxValue;
+            foreach (var candidate in FootballPlayerController.All)
+            {
+                if (candidate == null || candidate == taker || candidate.IsGoalkeeper ||
+                    candidate.TeamDirection != awardedDirection)
+                    continue;
+
+                var position = candidate.transform.position;
+                var distance = Vector2.Distance(
+                    new Vector2(position.x, position.z), new Vector2(runnerTarget.x, runnerTarget.z));
+                if (candidate.Role == PlayerRole.Forward)
+                    distance -= 3f;
+                if (distance < bestDistance)
+                {
+                    bestDistance = distance;
+                    runner = candidate;
+                }
+            }
+
+            if (runner != null)
+                SetControlledPlayer(runner);
+        }
+
+        private void ConfirmCornerPreparation()
+        {
+            if (!cornerPrepActive)
+                return;
+
+            cornerPrepActive = false;
+            if (cornerTaker != null)
+                SetControlledPlayer(cornerTaker);
+            goalBanner = "CORNER";
+            goalBannerUntil = Time.time + 1.15f;
+            commentary = "Corner set. Deliver into the box or play short.";
+        }
+
+        private void SetControlledPlayer(FootballPlayerController selected)
+        {
+            if (selected == null)
+                return;
+            if (userPlayer != null && userPlayer != selected)
+                userPlayer.SetUserControlled(false);
+
+            selected.SetUserControlled(true);
+            userPlayer = selected;
+            broadcastCamera?.SetControlledPlayer(selected.transform);
         }
 
         private int LastTouchDirection()
@@ -1572,12 +1656,15 @@ namespace FC2026.Core
 
             DrawStaminaMeter(boardRect);
 
-            if (live && !halfTimePending && !matchFinished)
+            if ((live || cornerPrepActive) && !halfTimePending && !matchFinished)
             {
-                var pauseSize = Mathf.Clamp(safeArea.height * 0.08f, 42f, 56f);
-                var pauseRect = new Rect(safeArea.xMax - pauseSize - 12f, safeTop + 12f, pauseSize, pauseSize);
-                if (GUI.Button(pauseRect, "II", pauseIconStyle))
-                    PauseMatch();
+                if (live)
+                {
+                    var pauseSize = Mathf.Clamp(safeArea.height * 0.08f, 42f, 56f);
+                    var pauseRect = new Rect(safeArea.xMax - pauseSize - 12f, safeTop + 12f, pauseSize, pauseSize);
+                    if (GUI.Button(pauseRect, "II", pauseIconStyle))
+                        PauseMatch();
+                }
                 if (Application.isMobilePlatform)
                     DrawMobileControls();
             }
@@ -1592,11 +1679,14 @@ namespace FC2026.Core
                 var safeBottom = Screen.height - desktopSafeArea.yMin;
                 GUI.Label(new Rect(desktopSafeArea.xMin + 18f, safeBottom - 48f,
                     Mathf.Max(0f, desktopSafeArea.width - 36f), 36f),
-                    "WASD / arrows: move   •   Shift: sprint   •   Space: shoot   •   E: pass/hold lob   •   R: lob   •   Q: through ball   •   F: cross   •   G: curved teammate run   •   X: tackle   •   C: call pressure   •   V: shield   •   B: low shot   •   Tab: switch   •   P / Esc: pause",
+                    "WASD / arrows: move   •   Shift: sprint   •   Space: shoot   •   E: pass/hold lob   •   R: lob   •   Q: through ball   •   F: cross   •   G: curved teammate run   •   Corner: Enter to deliver   •   X: tackle   •   C: call pressure   •   V: shield   •   B: low shot   •   Tab: switch   •   P / Esc: pause",
                     helpStyle);
             }
 
-            if (Time.time < goalBannerUntil)
+            if (cornerPrepActive)
+                GUI.Label(new Rect(0, Screen.height * 0.33f, Screen.width, 100f),
+                    "CORNER SETUP  •  MOVE YOUR ATTACKER, THEN DELIVER", goalStyle);
+            else if (Time.time < goalBannerUntil)
                 GUI.Label(new Rect(0, Screen.height * 0.33f, Screen.width, 100f), goalBanner, goalStyle);
 
             // On landscape phones the touch controls occupy the lower half of the
@@ -2096,6 +2186,15 @@ namespace FC2026.Core
             Rect ActionRect(int column, int row) => new Rect(
                 right - actionSize - column * (actionSize + gap),
                 bottom - actionSize - row * (actionSize + gap), actionSize, actionSize);
+
+            if (cornerPrepActive)
+            {
+                userPlayer.SetMobileMove(move, false);
+                if (GUI.Button(ActionRect(0, 0), "DELIVER", actionPrimaryStyle))
+                    ConfirmCornerPreparation();
+                GUI.color = Color.white;
+                return;
+            }
 
             var shotHeld = GUI.RepeatButton(
                 ActionRect(0, 0),
