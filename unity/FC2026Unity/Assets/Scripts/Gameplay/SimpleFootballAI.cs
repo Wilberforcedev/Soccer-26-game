@@ -213,6 +213,15 @@ namespace FC2026.Gameplay
                 return;
             }
 
+            var match = MatchManager3D.Instance;
+            if (!MatchManager3D.IsCornerPrep && match != null &&
+                match.CornerPlayersPositioning && !controller.IsUserControlled &&
+                controller != match.CornerPrepTaker)
+            {
+                PositionForCorner();
+                return;
+            }
+
             if (!MatchManager3D.IsLive)
             {
                 Brake();
