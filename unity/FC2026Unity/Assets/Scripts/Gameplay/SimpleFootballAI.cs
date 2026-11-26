@@ -76,8 +76,12 @@ namespace FC2026.Gameplay
                     continue;
 
                 var score = distance + Mathf.Abs(forwardGap - 6f) * 0.12f;
-                if (candidate.Role == PlayerRole.Forward)
-                    score -= 2f;
+                score += candidate.Role switch
+                {
+                    PlayerRole.Forward => -4f,
+                    PlayerRole.Defender => 3f,
+                    _ => 0f
+                };
                 if (score < bestScore)
                 {
                     bestScore = score;
