@@ -57,6 +57,7 @@ See [UNITY_3D.md](UNITY_3D.md) for Android builds and the project details.
 - **R** — lofted pass
 - **F** — cross into space from a wide attacking position
 - **Enter** — confirm corner positioning and take control of the corner taker
+- **Hold Z** — avoid opponents during corner setup; **hold V** to shield your position
 - **G** — trigger a curved run from a teammate into open space
 - **Q** — through ball
 - **X** — tackle
@@ -70,7 +71,7 @@ See [UNITY_3D.md](UNITY_3D.md) for Android builds and the project details.
 
 ### Android
 
-Use the virtual joystick to move. The on-screen buttons provide sprint, shoot, pass, through ball, tackle, pressure, player switching, chip shot or cross, finesse shot, shielding, and low-driven shot. Tap **Shoot** when a high loose cross is within reach to attempt a header. The **Chip** button becomes **Cross** when carrying the ball in a wide attacking position. The **Run** button sends an off-ball teammate on a limited curved run when your team has possession. At your team’s corners, move the selected attacker into space and tap **Deliver** to take control of the taker. Hold **Shoot** to charge power and hold **Pass/Lob** to play a lofted pass. Tactics and CPU difficulty can be changed from the pause menu.
+Use the virtual joystick to move. The on-screen buttons provide sprint, shoot, pass, through ball, tackle, pressure, player switching, chip shot or cross, finesse shot, shielding, and low-driven shot. Tap **Shoot** when a high loose cross is within reach to attempt a header. The **Chip** button becomes **Cross** when carrying the ball in a wide attacking position. The **Run** button sends an off-ball teammate on a limited curved run when your team has possession. At your team’s corners, move the selected attacker into space, hold **Avoid** to move through opponents or **Shield** to hold position, then tap **Deliver** to take control of the taker. Hold **Shoot** to charge power and hold **Pass/Lob** to play a lofted pass. Tactics and CPU difficulty can be changed from the pause menu.
 
 ## Android builds
 
