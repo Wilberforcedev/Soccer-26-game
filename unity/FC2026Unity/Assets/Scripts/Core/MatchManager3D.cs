@@ -197,7 +197,7 @@ namespace FC2026.Core
 
             if (!cornerPrepActive && float.IsPositiveInfinity(cornerShapeHoldUntil) &&
                 cornerTaker != null && ball != null && ball.LastKicker == cornerTaker.transform)
-                cornerShapeHoldUntil = float.PositiveInfinity;
+                cornerShapeHoldUntil = Time.time + 4.2f;
 
             if (Input.GetKeyDown(KeyCode.Alpha1))
                 ApplyHomeTactic(MatchTacticPreset.Balanced);
@@ -794,7 +794,7 @@ namespace FC2026.Core
                 return;
 
             cornerPrepActive = false;
-            cornerShapeHoldUntil = Time.time + 4.2f;
+            cornerShapeHoldUntil = float.PositiveInfinity;
             if (cornerTaker != null)
                 SetControlledPlayer(cornerTaker);
             goalBanner = "CORNER";
