@@ -225,6 +225,8 @@ namespace FC2026.Gameplay
                 QueueLowDrivenShot();
             if (Input.GetKeyDown(KeyCode.F))
                 QueueCross();
+            if (Input.GetKeyDown(KeyCode.G))
+                SimpleFootballAI.TriggerCurvedRun(this);
             if (Input.GetKeyDown(KeyCode.X) || Input.GetKeyDown(KeyCode.JoystickButton1))
                 tackleQueued = true;
             if (Input.GetKeyDown(KeyCode.Tab))
