@@ -15,6 +15,8 @@ namespace FC2026.Gameplay
         private const float MaxTackleBallHeight = 1.55f;
         private const float ShotChargeDuration = 0.9f;
         private const float LoftPassHoldDuration = 0.28f;
+        private const float HeaderContactMinHeight = 0.95f;
+        private const float HeaderContactMaxHeight = 2.35f;
 
         [SerializeField] private float moveSpeed = 7.1f;
         [SerializeField] private float sprintSpeed = 9.7f;
@@ -358,6 +360,8 @@ namespace FC2026.Gameplay
         {
             if (ball == null || !ball.IsFree || kickLock > 0f || !ball.CanBeControlledBy(this))
                 return false;
+            if (!IsGoalkeeper && ball.Position.y >= HeaderContactMinHeight)
+                return false;
 
             var delta = ball.Position - transform.position;
             delta.y = 0f;
@@ -593,7 +597,8 @@ namespace FC2026.Gameplay
         public bool AttemptShot(bool chip = false, bool finesse = false, float? targetXOverride = null, float powerCharge01 = 0f, bool lowDriven = false)
         {
             var ball = BallController.Instance;
-            if (!CanPlayBall(ball) || kickLock > 0f)
+            var header = CanHeaderBall(ball);
+            if ((!header && !CanPlayBall(ball)) || kickLock > 0f)
                 return false;
 
             var goalZ = TeamDirection * 52.4f;
@@ -606,6 +611,9 @@ namespace FC2026.Gameplay
             if (flat.sqrMagnitude < 0.01f)
                 return false;
             flat.Normalize();
+
+            if (header)
+                return AttemptHeaderShot(ball, goalZ, distance, targetX, flat, powerCharge01);
 
             var useLeftFoot = SelectLeftFoot(ball.Position);
             var footAccuracy = useLeftFoot == prefersLeftFoot ? 1f : 0.88f;
@@ -639,6 +647,50 @@ namespace FC2026.Gameplay
             ball.Kick(flat, power, lift, transform, curve);
             MatchManager3D.Instance?.RecordShot(TeamId, IsShotOnTarget(ball, goalZ));
             kickLock = 0.32f;
+            return true;
+        }
+
+        private bool CanHeaderBall(BallController ball)
+        {
+            if (ball == null || IsGoalkeeper || ball.Owner != null ||
+                ball.Position.y < HeaderContactMinHeight ||
+                ball.Position.y > HeaderContactMaxHeight)
+                return false;
+
+            var delta = ball.Position - transform.position;
+            delta.y = 0f;
+            return delta.sqrMagnitude <= kickReach * kickReach;
+        }
+
+        private bool AttemptHeaderShot(BallController ball, float goalZ, float distance,
+            float targetX, Vector3 flat, float powerCharge01)
+        {
+            var horizontalDistance = new Vector2(
+                targetX - ball.Position.x, goalZ - ball.Position.z).magnitude;
+            var pressureDistance = NearestOpponentDistance(transform.position);
+            var contactQuality = Mathf.Clamp01(1f - Mathf.Abs(ball.Position.y - 1.55f) * 0.62f);
+            var pressureAccuracy = Mathf.Lerp(0.72f, 1f, Mathf.InverseLerp(1.2f, 5f, pressureDistance));
+            var accuracy = Mathf.Lerp(0.3f, 0.78f, shootingStat) * contactQuality *
+                           pressureAccuracy * Mathf.Lerp(0.82f, 1f, stamina) *
+                           Mathf.Lerp(1f, 0.92f, Mathf.Clamp01(powerCharge01));
+            var error = (1f - accuracy) * (0.16f + distance * 0.0045f);
+            var lateral = Vector3.Cross(Vector3.up, flat).normalized;
+            flat = (flat + lateral * Random.Range(-error, error)).normalized;
+
+            var horizontalSpeed = Mathf.Lerp(12.5f, 16f, shootingStat) *
+                                  Mathf.Lerp(1f, 1.12f, Mathf.Clamp01(powerCharge01));
+            var flightTime = Mathf.Max(0.08f, horizontalDistance / horizontalSpeed);
+            var targetHeight = Mathf.Lerp(0.65f, 1.45f, shootingStat);
+            var gravity = Mathf.Max(1f, -Physics.gravity.y);
+            var verticalSpeed = (targetHeight - ball.Position.y +
+                                 0.5f * gravity * flightTime * flightTime) / flightTime;
+            var power = Mathf.Sqrt(horizontalSpeed * horizontalSpeed + verticalSpeed * verticalSpeed);
+            var lift = power > 0.01f ? verticalSpeed / power : 0f;
+
+            motion?.TriggerHeader();
+            ball.Kick(flat, power, lift, transform);
+            MatchManager3D.Instance?.RecordShot(TeamId, IsShotOnTarget(ball, goalZ));
+            kickLock = 0.46f;
             return true;
         }
 
