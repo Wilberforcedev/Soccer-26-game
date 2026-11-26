@@ -55,6 +55,7 @@ See [UNITY_3D.md](UNITY_3D.md) for Android builds and the project details.
 - **E** — ground pass; hold briefly for a lofted pass
 - **R** — lofted pass
 - **F** — cross into space from a wide attacking position
+- **G** — trigger a curved run from a teammate into open space
 - **Q** — through ball
 - **X** — tackle
 - **C** — call a teammate to pressure the ball carrier while held
@@ -67,7 +68,7 @@ See [UNITY_3D.md](UNITY_3D.md) for Android builds and the project details.
 
 ### Android
 
-Use the virtual joystick to move. The on-screen buttons provide sprint, shoot, pass, through ball, tackle, pressure, player switching, chip shot or cross, finesse shot, shielding, and low-driven shot. The **Chip** button becomes **Cross** when carrying the ball in a wide attacking position. Hold **Shoot** to charge power and hold **Pass/Lob** to play a lofted pass. Tactics and CPU difficulty can be changed from the pause menu.
+Use the virtual joystick to move. The on-screen buttons provide sprint, shoot, pass, through ball, tackle, pressure, player switching, chip shot or cross, finesse shot, shielding, and low-driven shot. The **Chip** button becomes **Cross** when carrying the ball in a wide attacking position. The **Run** button sends an off-ball teammate on a limited curved run when your team has possession. Hold **Shoot** to charge power and hold **Pass/Lob** to play a lofted pass. Tactics and CPU difficulty can be changed from the pause menu.
 
 ## Android builds
 
