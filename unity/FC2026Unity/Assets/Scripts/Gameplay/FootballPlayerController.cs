@@ -177,7 +177,7 @@ namespace FC2026.Gameplay
 
         private void Update()
         {
-            if (!IsUserControlled || !MatchManager3D.IsLive)
+            if (!IsUserControlled || (!MatchManager3D.IsLive && !MatchManager3D.IsCornerPrep))
                 return;
 
             if (Application.isMobilePlatform && Input.touchCount == 0)
@@ -189,6 +189,9 @@ namespace FC2026.Gameplay
                 mobileShieldHeld = false;
                 mobileShotHeld = false;
             }
+
+            if (MatchManager3D.IsCornerPrep)
+                return;
 
             var passHeld = mobilePassHeld || Input.GetKey(KeyCode.E) || Input.GetKey(KeyCode.JoystickButton2);
             if (passHeld)
@@ -250,6 +253,12 @@ namespace FC2026.Gameplay
 
                 var aiSpeed = new Vector3(body.linearVelocity.x, 0f, body.linearVelocity.z).magnitude;
                 UpdateStamina(aiSpeed > moveSpeed * 1.02f, aiSpeed);
+                return;
+            }
+
+            if (MatchManager3D.IsCornerPrep)
+            {
+                UpdateCornerPrepMovement();
                 return;
             }
 
@@ -329,6 +338,39 @@ namespace FC2026.Gameplay
             }
 
             TryClaimLooseBall();
+        }
+
+        private void UpdateCornerPrepMovement()
+        {
+            var move = ReadMove();
+            var sprinting = ReadSprint() && move.sqrMagnitude > 0.02f && stamina > 0.04f;
+            var desired = new Vector3(move.x, 0f, move.y);
+            if (desired.sqrMagnitude > 1f)
+                desired.Normalize();
+
+            var speed = (sprinting ? sprintSpeed : moveSpeed) * paceMultiplier *
+                        Mathf.Lerp(0.74f, 1f, stamina);
+            var horizontal = new Vector3(body.linearVelocity.x, 0f, body.linearVelocity.z);
+            if (desired.sqrMagnitude > 0.01f)
+            {
+                lastMoveDirection = desired.normalized;
+                var targetVelocity = desired * speed;
+                var changed = Vector3.MoveTowards(horizontal, targetVelocity, acceleration * Time.fixedDeltaTime);
+                var next = body.position + changed * Time.fixedDeltaTime;
+                next.x = Mathf.Clamp(next.x, -32.5f, 32.5f);
+                next.z = Mathf.Clamp(next.z, -51.5f, 51.5f);
+                body.position = next;
+                body.linearVelocity = new Vector3(changed.x, body.linearVelocity.y, changed.z);
+
+                var look = Quaternion.LookRotation(lastMoveDirection, Vector3.up);
+                transform.rotation = Quaternion.Slerp(transform.rotation, look, rotationSpeed * Time.fixedDeltaTime);
+            }
+            else
+            {
+                Decelerate(acceleration * 0.85f);
+            }
+
+            UpdateStamina(sprinting, horizontal.magnitude);
         }
 
         private void Decelerate(float rate)
