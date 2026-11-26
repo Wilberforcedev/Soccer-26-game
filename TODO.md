@@ -12,6 +12,7 @@
 - [x] Add hold-to-charge shooting with a visible mobile power readout and a small accuracy trade-off at full power.
 - [ ] Tune the new decisions and ball response through in-game play on desktop and Android.
 - [x] Improve off-ball support runs, attacking width, and coordinated pressing.
+- [x] Add a manual curved run command that targets open space and respects the offside line.
 - [x] Improve goalkeeper positioning and shot-reaction decisions with goal-side alignment and predicted shot-plane interception.
 - [x] Add halftime team tactics: balanced, high press, and counter attack.
 - [x] Allow tactical presets to be changed from the pause menu and keyboard during live play.
