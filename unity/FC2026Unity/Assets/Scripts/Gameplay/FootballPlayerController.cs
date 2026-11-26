@@ -45,6 +45,12 @@ namespace FC2026.Gameplay
         private bool mobileShieldHeld;
         private bool mobileCornerShieldHeld;
         private bool mobileCornerAvoidanceHeld;
+        private bool passFollowArmed;
+        private bool passFollowRunActive;
+        private Vector3 passFollowStart;
+        private Vector3 passFollowTarget;
+        private float passFollowSide;
+        private float passFollowTime;
         private bool cornerAvoidanceActive;
         private readonly List<(Collider own, Collider other)> cornerIgnoredCollisions = new();
 
@@ -80,6 +86,7 @@ namespace FC2026.Gameplay
         public float PhysicalStat => physicalStat;
         public float ShotCharge01 => Mathf.Clamp01(shotChargeTime / ShotChargeDuration);
         public float PassHold01 => Mathf.Clamp01(passHoldTime / LoftPassHoldDuration);
+        public bool PassFollowArmed => passFollowArmed;
         public bool IsShielding => IsUserControlled && HasBall &&
                                    (mobileShieldHeld || Input.GetKey(KeyCode.V));
         public bool IsGoalkeeper => Role == PlayerRole.Goalkeeper;
@@ -253,7 +260,12 @@ namespace FC2026.Gameplay
             if (Input.GetKeyDown(KeyCode.F))
                 QueueCross();
             if (Input.GetKeyDown(KeyCode.G))
-                SimpleFootballAI.TriggerCurvedRun(this);
+            {
+                if (HasBall && (Input.GetKey(KeyCode.E) || passInputHeld))
+                    passFollowArmed = true;
+                else
+                    SimpleFootballAI.TriggerCurvedRun(this);
+            }
             if (Input.GetKeyDown(KeyCode.X) || Input.GetKeyDown(KeyCode.JoystickButton1))
                 tackleQueued = true;
             if (Input.GetKeyDown(KeyCode.Tab))
@@ -294,16 +306,46 @@ namespace FC2026.Gameplay
 
             var move = ReadMove();
             var shielding = IsShielding;
-            var sprinting = ReadSprint() && move.sqrMagnitude > 0.02f && stamina > 0.04f && !shielding;
+            var desired = new Vector3(move.x, 0f, move.y);
+            if (desired.sqrMagnitude > 1f)
+                desired.Normalize();
+
+            var passFollowRunning = false;
+            if (passFollowRunActive)
+            {
+                if (move.sqrMagnitude > 0.08f)
+                {
+                    passFollowRunActive = false;
+                }
+                else
+                {
+                    var progress = 1f - Mathf.Clamp01(passFollowTime / 2.7f);
+                    var curve = Vector3.right * (Mathf.Sin(progress * Mathf.PI) * passFollowSide * 2.6f);
+                    var followPoint = Vector3.Lerp(passFollowStart, passFollowTarget, progress) + curve;
+                    var followDirection = followPoint - Flat(transform.position);
+                    if (followDirection.sqrMagnitude < 1f || passFollowTime <= 0f)
+                    {
+                        passFollowRunActive = false;
+                    }
+                    else
+                    {
+                        desired = followDirection.normalized;
+                        passFollowRunning = true;
+                        passFollowTime = Mathf.Max(0f, passFollowTime - Time.fixedDeltaTime);
+                    }
+                }
+            }
+
+            var sprinting = ReadSprint() && move.sqrMagnitude > 0.02f &&
+                            stamina > 0.04f && !shielding && !passFollowRunning;
             var carryFactor = HasBall ? 0.93f : 1f;
             var fatigueFactor = Mathf.Lerp(0.74f, 1f, stamina);
             var shieldingFactor = shielding ? 0.68f : 1f;
             // The selected player's pace rating scales their movement and sprint speed.
-            var desiredSpeed = (sprinting ? sprintSpeed : moveSpeed) * paceMultiplier *
-                               fatigueFactor * carryFactor * shieldingFactor;
-            var desired = new Vector3(move.x, 0f, move.y);
-            if (desired.sqrMagnitude > 1f)
-                desired.Normalize();
+            var desiredSpeed = passFollowRunning
+                ? moveSpeed * 0.92f * paceMultiplier * fatigueFactor
+                : (sprinting ? sprintSpeed : moveSpeed) * paceMultiplier *
+                  fatigueFactor * carryFactor * shieldingFactor;
 
             var horizontal = new Vector3(body.linearVelocity.x, 0f, body.linearVelocity.z);
             if (desired.sqrMagnitude > 0.01f)
@@ -462,6 +504,12 @@ namespace FC2026.Gameplay
         public void SetMobileShieldHeld(bool held) => mobileShieldHeld = held;
 
         public void SetMobileCornerShieldHeld(bool held) => mobileCornerShieldHeld = held;
+        public void TogglePassFollowArm()
+        {
+            if (HasBall)
+                passFollowArmed = !passFollowArmed;
+        }
+
         public void SetMobileCornerAvoidanceHeld(bool held)
         {
             mobileCornerAvoidanceHeld = held;
@@ -765,6 +813,26 @@ namespace FC2026.Gameplay
             return true;
         }
 
+        private void BeginPassFollowRun(Vector3 receiverPosition)
+        {
+            passFollowStart = Flat(transform.position);
+            var receiver = Flat(receiverPosition);
+            var startProgress = passFollowStart.z * TeamDirection;
+            var receiverProgress = receiver.z * TeamDirection;
+            var targetProgress = Mathf.Min(
+                Mathf.Max(startProgress + 5.5f, receiverProgress + 6f),
+                Mathf.Min(startProgress + 14f, 48f));
+            passFollowSide = Mathf.Abs(receiver.x) > 3f
+                ? -Mathf.Sign(receiver.x)
+                : Mathf.Abs(passFollowStart.x) > 2f ? -Mathf.Sign(passFollowStart.x) : 1f;
+            passFollowTarget = new Vector3(
+                Mathf.Clamp(receiver.x + passFollowSide * 3.5f, -27f, 27f),
+                0f,
+                targetProgress * TeamDirection);
+            passFollowTime = 2.7f;
+            passFollowRunActive = true;
+        }
+
         private bool CanHeaderBall(BallController ball)
         {
             if (ball == null || IsGoalkeeper || ball.Owner != null ||
@@ -968,6 +1036,11 @@ namespace FC2026.Gameplay
             var lift = throughBall ? 0.17f : lofted ? 0.25f : 0.025f;
             var curve = throughBall ? 1.5f : lofted ? 0.45f : 0f;
             ball.Kick(flat, speed, lift, transform, curve);
+            if (IsUserControlled && passFollowArmed)
+            {
+                passFollowArmed = false;
+                BeginPassFollowRun(target.transform.position);
+            }
             MatchManager3D.Instance?.RegisterPassForOffside(this);
             kickLock = 0.26f;
             return true;
