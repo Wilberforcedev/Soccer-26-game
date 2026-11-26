@@ -9,6 +9,7 @@ namespace FC2026.Gameplay
         private const float TackleDuration = 0.72f;
         private const float CelebrationDuration = 2.6f;
         private const float DiveDuration = 0.82f;
+        private const float HeaderDuration = 0.56f;
 
         private Rigidbody body;
         private ProceduralHumanoidRig rig;
@@ -19,6 +20,7 @@ namespace FC2026.Gameplay
         private float tackleTimer;
         private float celebrationTimer;
         private float diveTimer;
+        private float headerTimer;
         private float kickIntensity = 1f;
         private float diveSide = 1f;
         private float cadence = 1f;
@@ -63,6 +65,7 @@ namespace FC2026.Gameplay
             tackleTimer = Mathf.Max(0f, tackleTimer - Time.deltaTime);
             celebrationTimer = Mathf.Max(0f, celebrationTimer - Time.deltaTime);
             diveTimer = Mathf.Max(0f, diveTimer - Time.deltaTime);
+            headerTimer = Mathf.Max(0f, headerTimer - Time.deltaTime);
 
             var horizontalVelocity = new Vector3(body.linearVelocity.x, 0f, body.linearVelocity.z);
             var speed = horizontalVelocity.magnitude;
@@ -79,6 +82,8 @@ namespace FC2026.Gameplay
                 ApplyGoalkeeperDive();
             else if (tackleTimer > 0f)
                 ApplyTackle();
+            else if (headerTimer > 0f)
+                ApplyHeader();
             else if (kickTimer > 0f)
                 ApplyKick();
             else
@@ -140,6 +145,18 @@ namespace FC2026.Gameplay
             rig.Chest.localRotation = Quaternion.Euler(-Mathf.Lerp(2f, 11f, speed01) * forwardLean, -cycle * 4f,
                 -turnAngle * (carryingBall ? 0.9f : 0.72f));
             rig.Head.localRotation = Quaternion.Euler(Mathf.Lerp(1f, 5f, speed01), cycle * 1.5f, -turnAngle * 0.28f);
+        }
+
+        private void ApplyHeader()
+        {
+            var progress = 1f - headerTimer / HeaderDuration;
+            var contact = Mathf.Sin(Mathf.Clamp01(progress) * Mathf.PI);
+            rig.Hips.localRotation = Quaternion.Euler(-3f * contact, 0f, 0f);
+            rig.Spine.localRotation = Quaternion.Euler(-15f * contact, 0f, 0f);
+            rig.Chest.localRotation = Quaternion.Euler(-10f * contact, 0f, 0f);
+            rig.Head.localRotation = Quaternion.Euler(18f * contact, 0f, 0f);
+            rig.LeftUpperArm.localRotation = Quaternion.Euler(-10f * contact, 0f, -8f * contact);
+            rig.RightUpperArm.localRotation = Quaternion.Euler(-10f * contact, 0f, 8f * contact);
         }
 
         private void ApplyKick()
@@ -236,6 +253,12 @@ namespace FC2026.Gameplay
         public void TriggerShot(bool leftFoot = false)
         {
             TriggerKick(1f, leftFoot);
+        }
+
+        public void TriggerHeader()
+        {
+            kickTimer = 0f;
+            headerTimer = HeaderDuration;
         }
 
         public void TriggerKick(float intensity = 1f, bool leftFoot = false)
