@@ -65,6 +65,7 @@ namespace FC2026.Core
         private int cornerPrepDirection;
         private Vector3 cornerPrepSpot;
         private FootballPlayerController cornerTaker;
+        private float cornerShapeHoldUntil;
         private bool resultSaved;
         private GUIStyle commentaryStyle;
         private GUIStyle fullTimeStyle;
@@ -104,6 +105,7 @@ namespace FC2026.Core
         public int CornerPrepDirection => cornerPrepDirection;
         public Vector3 CornerPrepSpot => cornerPrepSpot;
         public FootballPlayerController CornerPrepTaker => cornerTaker;
+        public bool CornerPlayersPositioning => cornerPrepActive || Time.time < cornerShapeHoldUntil;
 
 
         private void Awake()
@@ -672,6 +674,7 @@ namespace FC2026.Core
             live = false;
             cornerPrepActive = false;
             cornerTaker = null;
+            cornerShapeHoldUntil = 0f;
             penaltyPending = label == "PENALTY";
             penaltyTaker = null;
 
@@ -784,6 +787,7 @@ namespace FC2026.Core
                 return;
 
             cornerPrepActive = false;
+            cornerShapeHoldUntil = Time.time + 4.2f;
             if (cornerTaker != null)
                 SetControlledPlayer(cornerTaker);
             goalBanner = "CORNER";
