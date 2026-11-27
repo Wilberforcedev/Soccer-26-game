@@ -325,14 +325,18 @@ namespace FC2026.Gameplay
                 {
                     var progress = 1f - Mathf.Clamp01(passFollowTime / 2.7f);
                     var curve = Vector3.right * (Mathf.Sin(progress * Mathf.PI) * passFollowSide * 2.6f);
+                    var current = Flat(transform.position);
                     var followPoint = Vector3.Lerp(passFollowStart, passFollowTarget, progress) + curve;
-                    var followDirection = followPoint - Flat(transform.position);
-                    if (followDirection.sqrMagnitude < 1f || passFollowTime <= 0f)
+                    var followDirection = followPoint - current;
+                    var remaining = passFollowTarget - current;
+                    if (remaining.sqrMagnitude < 1f || passFollowTime <= 0f)
                     {
                         passFollowRunActive = false;
                     }
                     else
                     {
+                        if (followDirection.sqrMagnitude < 0.2f)
+                            followDirection = remaining;
                         desired = followDirection.normalized;
                         passFollowRunning = true;
                         passFollowTime = Mathf.Max(0f, passFollowTime - Time.fixedDeltaTime);
