@@ -624,6 +624,9 @@ namespace FC2026.Gameplay
             mobileShotHeld = false;
             mobileSecondManPressHeld = false;
             mobileShieldHeld = false;
+            passFollowArmed = false;
+            passFollowRunActive = false;
+            passFollowTime = 0f;
             SecondaryPressPlayer = null;
             shotChargeInputHeld = false;
             shotChargeTime = 0f;
