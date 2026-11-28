@@ -95,6 +95,8 @@ namespace FC2026.Gameplay
         public float ShotCharge01 => Mathf.Clamp01(shotChargeTime / ShotChargeDuration);
         public float PassHold01 => Mathf.Clamp01(passHoldTime / LoftPassHoldDuration);
         public float DinkHold01 => Mathf.Clamp01(dinkHoldTime / 0.65f);
+        public float ContactSpeedFactor => offBalanceTimer > 0f ? offBalanceSpeedFactor : 1f;
+        public float ContactAccelerationFactor => offBalanceTimer > 0f ? offBalanceAccelerationFactor : 1f;
         public bool PassFollowArmed => passFollowArmed;
         public bool IsShielding => IsUserControlled && HasBall &&
                                    (mobileShieldHeld || Input.GetKey(KeyCode.V));
