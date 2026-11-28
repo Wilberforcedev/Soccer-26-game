@@ -10,6 +10,7 @@ namespace FC2026.Gameplay
         private const float CelebrationDuration = 2.6f;
         private const float DiveDuration = 0.82f;
         private const float HeaderDuration = 0.56f;
+        private const float OffBalanceDuration = 0.48f;
 
         private Rigidbody body;
         private ProceduralHumanoidRig rig;
@@ -21,6 +22,8 @@ namespace FC2026.Gameplay
         private float celebrationTimer;
         private float diveTimer;
         private float headerTimer;
+        private float offBalanceTimer;
+        private float offBalanceSide = 1f;
         private float kickIntensity = 1f;
         private float diveSide = 1f;
         private float cadence = 1f;
@@ -66,6 +69,7 @@ namespace FC2026.Gameplay
             celebrationTimer = Mathf.Max(0f, celebrationTimer - Time.deltaTime);
             diveTimer = Mathf.Max(0f, diveTimer - Time.deltaTime);
             headerTimer = Mathf.Max(0f, headerTimer - Time.deltaTime);
+            offBalanceTimer = Mathf.Max(0f, offBalanceTimer - Time.deltaTime);
 
             var horizontalVelocity = new Vector3(body.linearVelocity.x, 0f, body.linearVelocity.z);
             var speed = horizontalVelocity.magnitude;
@@ -84,6 +88,8 @@ namespace FC2026.Gameplay
                 ApplyTackle();
             else if (headerTimer > 0f)
                 ApplyHeader();
+            else if (offBalanceTimer > 0f)
+                ApplyOffBalance();
             else if (kickTimer > 0f)
                 ApplyKick();
             else
@@ -157,6 +163,19 @@ namespace FC2026.Gameplay
             rig.Head.localRotation = Quaternion.Euler(18f * contact, 0f, 0f);
             rig.LeftUpperArm.localRotation = Quaternion.Euler(-10f * contact, 0f, -8f * contact);
             rig.RightUpperArm.localRotation = Quaternion.Euler(-10f * contact, 0f, 8f * contact);
+        }
+
+        private void ApplyOffBalance()
+        {
+            var progress = 1f - offBalanceTimer / OffBalanceDuration;
+            var sway = Mathf.Sin(Mathf.Clamp01(progress) * Mathf.PI);
+            rig.VisualRoot.localRotation = Quaternion.Euler(-5f * sway, 0f, -offBalanceSide * 11f * sway);
+            rig.Hips.localRotation = Quaternion.Euler(2f * sway, 0f, offBalanceSide * 8f * sway);
+            rig.Spine.localRotation = Quaternion.Euler(-7f * sway, 0f, -offBalanceSide * 6f * sway);
+            rig.LeftUpperArm.localRotation = Quaternion.Euler(-8f * sway, 0f, -18f * sway);
+            rig.RightUpperArm.localRotation = Quaternion.Euler(-8f * sway, 0f, 18f * sway);
+            rig.LeftUpperLeg.localRotation = Quaternion.Euler(12f * sway, 0f, -4f * sway);
+            rig.RightUpperLeg.localRotation = Quaternion.Euler(-7f * sway, 0f, 4f * sway);
         }
 
         private void ApplyKick()
@@ -243,6 +262,12 @@ namespace FC2026.Gameplay
             rig.RightLowerArm.localRotation = Quaternion.Euler(-18f, 0f, 0f);
             rig.LeftUpperLeg.localRotation = Quaternion.Euler(20f, 0f, 12f);
             rig.RightUpperLeg.localRotation = Quaternion.Euler(-18f, 0f, -12f);
+        }
+
+        public void TriggerOffBalance(float duration, float side)
+        {
+            offBalanceTimer = Mathf.Max(offBalanceTimer, Mathf.Clamp(duration, 0.12f, OffBalanceDuration));
+            offBalanceSide = side == 0f ? 1f : Mathf.Sign(side);
         }
 
         public void TriggerPass(bool leftFoot = false)
