@@ -2277,9 +2277,11 @@ namespace FC2026.Core
                     actionSecondaryStyle);
                 userPlayer.SetMobileDinkHeld(dinkHeld);
             }
-            else if (teamInPossession && GUI.Button(ActionRect(0, 5), "RUN", actionSecondaryStyle))
+            else
             {
-                SimpleFootballAI.TriggerCurvedRun(userPlayer);
+                userPlayer.SetMobileDinkHeld(false);
+                if (teamInPossession && GUI.Button(ActionRect(0, 5), "RUN", actionSecondaryStyle))
+                    SimpleFootballAI.TriggerCurvedRun(userPlayer);
             }
             if (teamInPossession && userPlayer.HasBall &&
                 GUI.Button(ActionRect(1, 5), userPlayer.PassFollowArmed ? "FOLLOW ✓" : "FOLLOW",
