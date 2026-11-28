@@ -213,6 +213,7 @@ namespace FC2026.Gameplay
                 mobileMove = Vector2.zero;
                 mobileSprint = false;
                 mobilePassHeld = false;
+                mobileDinkHeld = false;
                 mobileSecondManPressHeld = false;
                 mobileShieldHeld = false;
                 mobileShotHeld = false;
@@ -614,8 +615,8 @@ namespace FC2026.Gameplay
             }
         }
 
-        public void QueuePass() { loftedPassQueued = false; dinkedPassQueued = false; passQueued = true; }
-        public void QueueLoftedPass() { loftedPassQueued = true; dinkedPassQueued = false; passQueued = true; }
+        public void QueuePass() { loftedPassQueued = false; dinkedPassQueued = false; queuedDinkPower01 = 0f; passQueued = true; }
+        public void QueueLoftedPass() { loftedPassQueued = true; dinkedPassQueued = false; queuedDinkPower01 = 0f; passQueued = true; }
         public void QueueDinkedPass() { loftedPassQueued = false; dinkedPassQueued = true; passQueued = true; }
         public void QueueThroughBall() => throughBallQueued = true;
         public void QueueCross() => crossQueued = true;
