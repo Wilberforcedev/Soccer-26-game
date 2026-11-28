@@ -21,6 +21,7 @@ The current 3D build includes:
 - Crosses into space, timed player headers, and curved runs that respect the offside line
 - Rear challenges can draw a foul, with free kicks and penalty restarts
 - Pressure-aware clearances from CPU defenders near their own goal
+- Attribute-weighted stumble recovery when a ball carrier rides a shoulder challenge
 - keyboard and Android touch controls
 - dynamic broadcast camera, match score, and goal detection
 - generated fictional clubs, players, and kits
