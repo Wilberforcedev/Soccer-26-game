@@ -889,7 +889,8 @@ namespace FC2026.Gameplay
             }
 
             speed *= configuredSpeedMultiplier * difficultySpeedMultiplier *
-                     Mathf.Lerp(0.74f, 1f, stamina) * tacticalMultiplier;
+                     Mathf.Lerp(0.74f, 1f, stamina) * tacticalMultiplier *
+                     (controller != null ? controller.ContactSpeedFactor : 1f);
 
             var self = Flat(transform.position);
             var direction = target - self;
@@ -900,7 +901,9 @@ namespace FC2026.Gameplay
                 direction.Normalize();
                 var targetVelocity = direction * speed;
                 var current = new Vector3(body.linearVelocity.x, 0f, body.linearVelocity.z);
-                var changed = Vector3.MoveTowards(current, targetVelocity, acceleration * Time.fixedDeltaTime);
+                var contactAcceleration = acceleration *
+                                          (controller != null ? controller.ContactAccelerationFactor : 1f);
+                var changed = Vector3.MoveTowards(current, targetVelocity, contactAcceleration * Time.fixedDeltaTime);
                 body.linearVelocity = new Vector3(changed.x, body.linearVelocity.y, changed.z);
                 transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(direction), 9f * Time.fixedDeltaTime);
             }
