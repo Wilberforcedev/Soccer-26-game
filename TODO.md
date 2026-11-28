@@ -23,6 +23,8 @@
 - [x] Add low-driven shots for close-range and one-on-one finishing.
 - [x] Add lofted passing with a quick-tap ground pass and a hold-to-lob mobile control.
 - [x] Add a manually aimed, hold-to-charge dink pass with desktop and mobile controls.
+- [x] Add skill-weighted movement recovery and a stumble response after a carrier is bumped.
+- [ ] Add dedicated balance, agility, and dribbling ratings to player match profiles.
 - [x] Add crosses aimed into attacking space from wide positions, including CPU delivery when a runner is in the box.
 - [x] Add timing- and skill-dependent aerial headers from crosses, with CPU attempts near goal.
 - [x] Add a user-controlled corner setup phase with attackers and defenders moving into the box before delivery.
