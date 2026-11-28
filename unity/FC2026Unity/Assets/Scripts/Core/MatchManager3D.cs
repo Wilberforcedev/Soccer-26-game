@@ -2271,8 +2271,11 @@ namespace FC2026.Core
                                    BallController.Instance.Owner.TeamId == userPlayer.TeamId;
             if (teamInPossession && userPlayer.HasBall)
             {
-                if (GUI.Button(ActionRect(0, 5), "DINK", actionSecondaryStyle))
-                    userPlayer.QueueDinkedPass();
+                var dinkHeld = GUI.RepeatButton(
+                    ActionRect(0, 5),
+                    userPlayer.DinkHold01 > 0.03f ? $"DINK {Mathf.RoundToInt(userPlayer.DinkHold01 * 100f)}%" : "DINK",
+                    actionSecondaryStyle);
+                userPlayer.SetMobileDinkHeld(dinkHeld);
             }
             else if (teamInPossession && GUI.Button(ActionRect(0, 5), "RUN", actionSecondaryStyle))
             {
