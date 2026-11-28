@@ -2269,8 +2269,15 @@ namespace FC2026.Core
             var teamInPossession = BallController.Instance != null &&
                                    BallController.Instance.Owner != null &&
                                    BallController.Instance.Owner.TeamId == userPlayer.TeamId;
-            if (teamInPossession && GUI.Button(ActionRect(0, 5), "RUN", actionSecondaryStyle))
+            if (teamInPossession && userPlayer.HasBall)
+            {
+                if (GUI.Button(ActionRect(0, 5), "DINK", actionSecondaryStyle))
+                    userPlayer.QueueDinkedPass();
+            }
+            else if (teamInPossession && GUI.Button(ActionRect(0, 5), "RUN", actionSecondaryStyle))
+            {
                 SimpleFootballAI.TriggerCurvedRun(userPlayer);
+            }
             if (teamInPossession && userPlayer.HasBall &&
                 GUI.Button(ActionRect(1, 5), userPlayer.PassFollowArmed ? "FOLLOW ✓" : "FOLLOW",
                     actionSecondaryStyle))
