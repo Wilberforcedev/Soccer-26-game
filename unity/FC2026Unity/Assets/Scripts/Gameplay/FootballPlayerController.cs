@@ -472,6 +472,8 @@ namespace FC2026.Gameplay
             offBalanceTimer = Mathf.Max(offBalanceTimer, recoveryTime);
             offBalanceSpeedFactor = Mathf.Lerp(0.58f, 0.9f, dribbleControl);
             offBalanceAccelerationFactor = Mathf.Lerp(0.55f, 0.9f, dribbleControl);
+            var impactSide = Vector3.Dot(transform.right, collision.relativeVelocity);
+            motion?.TriggerOffBalance(recoveryTime, impactSide);
         }
 
         private void UpdateCornerPrepMovement()
