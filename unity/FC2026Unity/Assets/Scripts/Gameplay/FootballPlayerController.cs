@@ -31,6 +31,7 @@ namespace FC2026.Gameplay
         private FootballMotionAnimator motion;
         private bool passQueued;
         private bool loftedPassQueued;
+        private bool dinkedPassQueued;
         private bool passInputHeld;
         private bool mobilePassHeld;
         private float passHoldTime;
@@ -257,6 +258,8 @@ namespace FC2026.Gameplay
 
             if (Input.GetKeyDown(KeyCode.R))
                 QueueLoftedPass();
+            if (Input.GetKeyDown(KeyCode.T))
+                QueueDinkedPass();
             if (Input.GetKeyDown(KeyCode.Q))
                 throughBallQueued = true;
             if (Input.GetKeyDown(KeyCode.B))
@@ -383,8 +386,10 @@ namespace FC2026.Gameplay
             {
                 passQueued = false;
                 var lofted = loftedPassQueued;
+                var dinked = dinkedPassQueued;
                 loftedPassQueued = false;
-                AttemptPass(false, lofted);
+                dinkedPassQueued = false;
+                AttemptPass(false, lofted, dinked);
             }
 
             if (throughBallQueued)
@@ -590,8 +595,9 @@ namespace FC2026.Gameplay
             }
         }
 
-        public void QueuePass() { loftedPassQueued = false; passQueued = true; }
-        public void QueueLoftedPass() { loftedPassQueued = true; passQueued = true; }
+        public void QueuePass() { loftedPassQueued = false; dinkedPassQueued = false; passQueued = true; }
+        public void QueueLoftedPass() { loftedPassQueued = true; dinkedPassQueued = false; passQueued = true; }
+        public void QueueDinkedPass() { loftedPassQueued = false; dinkedPassQueued = true; passQueued = true; }
         public void QueueThroughBall() => throughBallQueued = true;
         public void QueueCross() => crossQueued = true;
         public void QueueShot() { queuedShotPower01 = 0f; lowDrivenShotQueued = false; shootQueued = true; }
@@ -611,6 +617,7 @@ namespace FC2026.Gameplay
         {
             passQueued = false;
             loftedPassQueued = false;
+            dinkedPassQueued = false;
             passInputHeld = false;
             mobilePassHeld = false;
             passHoldTime = 0f;
@@ -1000,13 +1007,13 @@ namespace FC2026.Gameplay
             return true;
         }
 
-        public bool AttemptPass(bool throughBall, bool lofted = false)
+        public bool AttemptPass(bool throughBall, bool lofted = false, bool dinked = false)
         {
             var ball = BallController.Instance;
             if (!CanPlayBall(ball) || kickLock > 0f)
                 return false;
 
-            var target = FindPassTarget(throughBall, lofted);
+            var target = FindPassTarget(throughBall, lofted, dinked);
             if (target == null)
                 return false;
 
@@ -1037,15 +1044,16 @@ namespace FC2026.Gameplay
             // Nearby defenders add a small directional error while passing skill still shapes the base accuracy.
             var pressureError = Mathf.Lerp(0.025f, 0f, Mathf.InverseLerp(1.25f, 5f, pressureDistance));
             var skillError = (1f - passingStat) *
-                             (throughBall ? 0.045f : lofted ? 0.04f : 0.03f);
+                             (throughBall ? 0.045f : lofted ? 0.04f : dinked ? 0.035f : 0.03f);
             // Fatigue affects touch and execution, with passing skill softening the accuracy loss.
             var fatigueError = (1f - stamina) * Mathf.Lerp(0.025f, 0.012f, passingStat);
             var passError = (skillError + pressureError + fatigueError) * footErrorFactor;
             flat = (flat + transform.right * Random.Range(-passError, passError)).normalized;
 
             motion?.TriggerPass(useLeftFoot);
-            var lift = throughBall ? 0.17f : lofted ? 0.25f : 0.025f;
-            var curve = throughBall ? 1.5f : lofted ? 0.45f : 0f;
+            // Dinks use a shallow arc to clear a nearby leg while staying lower than a deliberate lob.
+            var lift = throughBall ? 0.17f : lofted ? 0.25f : dinked ? 0.21f : 0.025f;
+            var curve = throughBall ? 1.5f : lofted ? 0.45f : dinked ? 0.12f : 0f;
             ball.Kick(flat, speed, lift, transform, curve);
             if (IsUserControlled && passFollowArmed)
             {
@@ -1057,7 +1065,7 @@ namespace FC2026.Gameplay
             return true;
         }
 
-        private FootballPlayerController FindPassTarget(bool throughBall, bool lofted)
+        private FootballPlayerController FindPassTarget(bool throughBall, bool lofted, bool dinked)
         {
             var ball = BallController.Instance;
             var origin = ball != null ? ball.Position : transform.position;
@@ -1095,6 +1103,7 @@ namespace FC2026.Gameplay
                 // Lofted passes can clear a tight ground lane, but close marking still lowers the target's score.
                 var laneRiskPenalty = lofted
                     ? Mathf.Lerp(4.5f, 2.5f, passingStat)
+                    : dinked ? Mathf.Lerp(6.5f, 3.8f, passingStat)
                     : Mathf.Lerp(9f, 5f, passingStat);
                 var score = forwardAmount * 9f + Mathf.Clamp(openness, 0f, 12f) * 0.85f
                             - Mathf.Abs(offset.x) * 0.07f - distance * 0.08f - laneRisk * laneRiskPenalty;
