@@ -67,6 +67,9 @@ namespace FC2026.Gameplay
         private Vector2 mobileMove;
         private bool mobileSprint;
         private float stamina = 1f;
+        private float offBalanceTimer;
+        private float offBalanceSpeedFactor = 1f;
+        private float offBalanceAccelerationFactor = 1f;
         private float kickLock;
         private float tackleCooldown;
         private float shootingStat = 0.6f;
@@ -298,6 +301,7 @@ namespace FC2026.Gameplay
 
         private void FixedUpdate()
         {
+            offBalanceTimer = Mathf.Max(0f, offBalanceTimer - Time.fixedDeltaTime);
             kickLock = Mathf.Max(0f, kickLock - Time.fixedDeltaTime);
             tackleCooldown = Mathf.Max(0f, tackleCooldown - Time.fixedDeltaTime);
 
@@ -370,17 +374,21 @@ namespace FC2026.Gameplay
             var fatigueFactor = Mathf.Lerp(0.74f, 1f, stamina);
             var shieldingFactor = shielding ? 0.68f : 1f;
             // The selected player's pace rating scales their movement and sprint speed.
-            var desiredSpeed = passFollowRunning
+            var desiredSpeed = (passFollowRunning
                 ? moveSpeed * 0.92f * paceMultiplier * fatigueFactor
                 : (sprinting ? sprintSpeed : moveSpeed) * paceMultiplier *
-                  fatigueFactor * carryFactor * shieldingFactor;
+                  fatigueFactor * carryFactor * shieldingFactor) *
+                               (offBalanceTimer > 0f ? offBalanceSpeedFactor : 1f);
 
             var horizontal = new Vector3(body.linearVelocity.x, 0f, body.linearVelocity.z);
             if (desired.sqrMagnitude > 0.01f)
             {
                 lastMoveDirection = desired.normalized;
                 var targetVelocity = desired * desiredSpeed;
-                var changed = Vector3.MoveTowards(horizontal, targetVelocity, acceleration * Time.fixedDeltaTime);
+                var contactAcceleration = offBalanceTimer > 0f
+                    ? acceleration * offBalanceAccelerationFactor
+                    : acceleration;
+                var changed = Vector3.MoveTowards(horizontal, targetVelocity, contactAcceleration * Time.fixedDeltaTime);
                 body.linearVelocity = new Vector3(changed.x, body.linearVelocity.y, changed.z);
 
                 var look = Quaternion.LookRotation(lastMoveDirection, Vector3.up);
@@ -434,6 +442,34 @@ namespace FC2026.Gameplay
             }
 
             TryClaimLooseBall();
+        }
+
+        private void OnCollisionEnter(Collision collision)
+        {
+            if (!HasBall || !MatchManager3D.IsLive || collision == null || collision.contactCount == 0)
+                return;
+
+            var opponent = collision.collider.GetComponentInParent<FootballPlayerController>();
+            if (opponent == null || opponent.TeamId == TeamId)
+                return;
+
+            var impactSpeed = collision.relativeVelocity.magnitude;
+            if (impactSpeed < 1.15f)
+                return;
+
+            // The match profile has physical, pace, and passing ratings rather than separate
+            // balance, agility, and dribbling ratings; use them as the current control proxy.
+            var dribbleControl = (
+                physicalStat +
+                Mathf.InverseLerp(0.88f, 1.14f, paceMultiplier) +
+                passingStat) / 3f;
+            var contactStrength = Mathf.InverseLerp(1.15f, 3.8f, impactSpeed);
+            var recoveryTime = Mathf.Lerp(0.48f, 0.18f, dribbleControl) *
+                               Mathf.Lerp(0.65f, 1f, contactStrength);
+
+            offBalanceTimer = Mathf.Max(offBalanceTimer, recoveryTime);
+            offBalanceSpeedFactor = Mathf.Lerp(0.58f, 0.9f, dribbleControl);
+            offBalanceAccelerationFactor = Mathf.Lerp(0.55f, 0.9f, dribbleControl);
         }
 
         private void UpdateCornerPrepMovement()
